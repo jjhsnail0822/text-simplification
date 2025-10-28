@@ -3,5 +3,5 @@
 /.vscode
 /data/wikipedia
 /results
-slurm*.out
+*.out
 /wandb
