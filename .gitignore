@@ -1,7 +1,0 @@
-.gitignore
-/.env.local
-/.vscode
-/data/wikipedia
-/results
-*.out
-/wandb
