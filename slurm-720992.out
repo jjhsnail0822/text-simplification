@@ -536,3 +536,33 @@ INFO 10-28 16:17:50 [block_pool.py:378] Successfully reset prefix cache
 INFO 10-28 16:18:14 [block_pool.py:378] Successfully reset prefix cache
 INFO 10-28 16:18:14 [block_pool.py:378] Successfully reset prefix cache
 INFO 10-28 16:18:14 [block_pool.py:378] Successfully reset prefix cache
+  0%|          | 80/18264 [31:17<122:16:18, 24.21s/it]                                                      {'loss': 0.0004, 'grad_norm': 0.12866327166557312, 'learning_rate': 2.987023653088042e-05, 'num_tokens': 4595484.0, 'completions/mean_length': 388.396875, 'completions/min_length': 319.4, 'completions/max_length': 449.8, 'completions/clipped_ratio': 0.0, 'completions/mean_terminated_length': 388.396875, 'completions/min_terminated_length': 319.4, 'completions/max_terminated_length': 449.8, 'rewards/reward_cefr_level/mean': 0.6272208452224731, 'rewards/reward_cefr_level/std': 0.3407155990600586, 'rewards/reward_bertscore/mean': 0.9369236707687378, 'rewards/reward_bertscore/std': 0.015352215059101582, 'rewards/reward_entailment/mean': 0.5279855012893677, 'rewards/reward_entailment/std': 0.19688162803649903, 'rewards/reward_lm_fluency/mean': 0.237770277261734, 'rewards/reward_lm_fluency/std': 0.01932943183928728, 'rewards/reward_length_ratio/mean': 0.9921760201454163, 'rewards/reward_length_ratio/std': 0.011998427473008633, 'rewards/reward_bleu_penalty/mean': 0.24998940229415895, 'rewards/reward_bleu_penalty/std': 0.14354246109724045, 'rewards/reward_ngram_repetition_penalty/mean': 0.44986268877983093, 'rewards/reward_ngram_repetition_penalty/std': 0.048952745646238326, 'reward': 2.383191227912903, 'reward_std': 0.11164951175451279, 'frac_reward_zero_std': 0.0, 'sampling/sampling_logp_difference/mean': 0.07158229798078537, 'sampling/sampling_logp_difference/max': 4.729070711135864, 'sampling/importance_sampling_ratio/min': 0.02597024370916188, 'sampling/importance_sampling_ratio/mean': 0.9935835480690003, 'sampling/importance_sampling_ratio/max': 2.0, 'entropy': 0.3366673350334167, 'clip_ratio/low_mean': 0.0, 'clip_ratio/low_min': 0.0, 'clip_ratio/high_mean': 0.0, 'clip_ratio/high_max': 0.0, 'clip_ratio/region_mean': 0.0, 'epoch': 0.01}
+  0%|          | 80/18264 [31:17<122:16:18, 24.21s/it]INFO 10-28 16:18:39 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:18:39 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:18:39 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:18:39 [block_pool.py:378] Successfully reset prefix cache
+  0%|          | 81/18264 [31:40<121:25:14, 24.04s/it]INFO 10-28 16:19:03 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:19:03 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:19:03 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:19:03 [block_pool.py:378] Successfully reset prefix cache
+  0%|          | 82/18264 [32:04<121:30:58, 24.06s/it]INFO 10-28 16:19:27 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:19:27 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:19:27 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:19:27 [block_pool.py:378] Successfully reset prefix cache
+  0%|          | 83/18264 [32:28<120:20:52, 23.83s/it]INFO 10-28 16:19:50 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:19:50 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:19:50 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:19:50 [block_pool.py:378] Successfully reset prefix cache
+  0%|          | 84/18264 [32:53<122:18:11, 24.22s/it]INFO 10-28 16:20:15 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:20:15 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:20:15 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:20:15 [block_pool.py:378] Successfully reset prefix cache
+  0%|          | 85/18264 [33:18<124:10:49, 24.59s/it]                                                      {'loss': 0.0028, 'grad_norm': 0.14845319092273712, 'learning_rate': 2.9862023653088043e-05, 'num_tokens': 4886694.0, 'completions/mean_length': 400.03125, 'completions/min_length': 346.0, 'completions/max_length': 463.8, 'completions/clipped_ratio': 0.01875, 'completions/mean_terminated_length': 398.2984924316406, 'completions/min_terminated_length': 346.0, 'completions/max_terminated_length': 462.8, 'rewards/reward_cefr_level/mean': 0.7067807435989379, 'rewards/reward_cefr_level/std': 0.24324552714824677, 'rewards/reward_bertscore/mean': 0.930417823791504, 'rewards/reward_bertscore/std': 0.01783738359808922, 'rewards/reward_entailment/mean': 0.6204723358154297, 'rewards/reward_entailment/std': 0.18970159888267518, 'rewards/reward_lm_fluency/mean': 0.24156883358955383, 'rewards/reward_lm_fluency/std': 0.020011352747678755, 'rewards/reward_length_ratio/mean': 0.9930148363113404, 'rewards/reward_length_ratio/std': 0.009344962798058987, 'rewards/reward_bleu_penalty/mean': 0.2543098419904709, 'rewards/reward_bleu_penalty/std': 0.15429202020168303, 'rewards/reward_ngram_repetition_penalty/mean': 0.4564849674701691, 'rewards/reward_ngram_repetition_penalty/std': 0.05168895646929741, 'reward': 2.6910872936248778, 'reward_std': 0.11047731190919877, 'frac_reward_zero_std': 0.0, 'sampling/sampling_logp_difference/mean': 0.0899459883570671, 'sampling/sampling_logp_difference/max': 5.897459697723389, 'sampling/importance_sampling_ratio/min': 0.013630538437064387, 'sampling/importance_sampling_ratio/mean': 0.9903312563896179, 'sampling/importance_sampling_ratio/max': 2.0, 'entropy': 0.404500974714756, 'clip_ratio/low_mean': 0.0, 'clip_ratio/low_min': 0.0, 'clip_ratio/high_mean': 0.0, 'clip_ratio/high_max': 0.0, 'clip_ratio/region_mean': 0.0, 'epoch': 0.01}
+  0%|          | 85/18264 [33:18<124:10:49, 24.59s/it]INFO 10-28 16:20:41 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:20:41 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:20:41 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:20:41 [block_pool.py:378] Successfully reset prefix cache
+  0%|          | 86/18264 [33:43<124:54:29, 24.74s/it]INFO 10-28 16:21:06 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:21:06 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:21:06 [block_pool.py:378] Successfully reset prefix cache
+INFO 10-28 16:21:06 [block_pool.py:378] Successfully reset prefix cache

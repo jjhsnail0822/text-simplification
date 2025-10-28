@@ -1,5 +1,7 @@
+.gitignore
 /.env.local
 /.vscode
-/data
+/data/wikipedia
 /results
+slurm*.out
 /wandb
