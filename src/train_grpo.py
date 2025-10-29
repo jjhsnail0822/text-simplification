@@ -6,7 +6,6 @@ import os
 from bert_score import BERTScorer
 import torch
 from level_assessment import LevelAssessor
-from sacrebleu.metrics import BLEU
 
 torch.manual_seed(42)
 os.environ.setdefault("WANDB_PROJECT", "text-simplification")
@@ -18,7 +17,6 @@ MAX_COMPLETION_LENGTH = 512
 tokenizer = None
 bertscorer = None
 level_assessor = None
-bleu_assessor = None
 spacy_nlp = None
 
 # Lazy init for evaluator vLLM (created on first reward call per process)
@@ -107,28 +105,46 @@ def split_sentence(text, lang):
     sentences = [sent.text for sent in doc.sents]
     return sentences
 
-def reward_ngram_repetition_penalty(completions, **kwargs):
+def _tokenize_for_distinct_batch(texts, langs):
+    out = [None] * len(texts)
+    by_lang = {}
+    for i, lang in enumerate(langs):
+        by_lang.setdefault(lang, []).append(i)
+    for lang, idxs in by_lang.items():
+        nlp = spacy_nlp[lang]
+        for i_doc, doc in zip(idxs, nlp.pipe([texts[i] for i in idxs], batch_size=16, n_process=1)):
+            out[i_doc] = [t.text.lower() for t in doc if not t.is_space]
+    return out
+
+def _distinct_n(tokens, n):
+    if len(tokens) < n:
+        return 1.0
+    total = max(1, len(tokens) - n + 1)
+    uniq = len({tuple(tokens[i:i+n]) for i in range(total)})
+    return uniq / total
+
+def reward_distinct_n(completions, **kwargs):
     texts = [c[0]["content"] for c in completions]
-    penalties = []
-    for txt in texts:
-        toks = tokenizer.tokenize(txt)
-        if len(toks) < 2:
-            penalties.append(0.0)
-            continue
-        worst_rep = 0.0
-        for n in (1, 2, 3, 4):
-            if len(toks) < n:
-                continue
-            ngrams = [tuple(toks[i:i+n]) for i in range(len(toks) - n + 1)]
-            total = len(ngrams)
-            uniq = len(set(ngrams))
-            rep_rate = 0.0 if total == 0 else 1.0 - (uniq / total)
-            worst_rep = max(worst_rep, rep_rate)
-        penalties.append(worst_rep)
-    return penalties
+    langs = kwargs["language"]
+    token_lists = _tokenize_for_distinct_batch(texts, langs)
+    rewards = []
+    for toks in token_lists:
+        d1 = _distinct_n(toks, 1)
+        d2 = _distinct_n(toks, 2)
+        d3 = _distinct_n(toks, 3)
+        # Weighted sum; emphasize bigram/trigram to discourage phrase looping
+        r = 0.4 * d1 + 0.35 * d2 + 0.25 * d3
+        rewards.append(max(0.0, min(1.0, r)))
+    return rewards
 
 def reward_entailment(completions, **kwargs):
-    prompt = "Determine if Sentence A entails Sentence B.\nIf B must be true given A, output True. Otherwise, output False.\nOutput only True or False, nothing else.\n\n[Sentence A]\n{sentence_a}\n\n[Sentence B]\n{sentence_b}"
+    # Make the instruction stricter and single-token friendly.
+    prompt = (
+        "Decide if Sentence A entails Sentence B. "
+        "If B must be true given A, answer True. Otherwise, answer False. "
+        "Answer with a single word: True or False.\n\n"
+        "[Sentence A]\n{sentence_a}\n\n[Sentence B]\n{sentence_b}"
+    )
     completion_contents = [completion[0]["content"] for completion in completions]
     references = prompts_to_references(kwargs['prompts'])
     langs = kwargs['language']
@@ -155,13 +171,16 @@ def reward_entailment(completions, **kwargs):
             batched_messages.append([{"role": "user", "content": prompt_2}])
 
         texts = _hf_chat_batch(batched_messages)
+        # Robust parse: any 'true' token wins, otherwise false.
         for text in texts:
-            if "true" in text.lower():
-                entailment_scores.append(1.0)
-            else:
-                entailment_scores.append(0.0)
-
-        reward = sum(entailment_scores) / total_num
+            t = text.strip().lower()
+            entailment_scores.append(1.0 if "true" in t and "false" not in t else 0.0)
+        # Symmetric aggregation: 1.0 if both directions are True, 0.5 if one, 0 if none
+        reward = 0.0
+        for j in range(0, len(entailment_scores), 2):
+            a_to_b, b_to_a = entailment_scores[j], entailment_scores[j+1]
+            reward += 1.0 if (a_to_b == 1.0 and b_to_a == 1.0) else (0.5 if (a_to_b + b_to_a == 1.0) else 0.0)
+        reward /= (len(entailment_scores) // 2)
         rewards.append(reward)
     return rewards
 
@@ -183,17 +202,17 @@ def prompts_to_references(prompts):
 #                 penalties[i] = 1.0
 #     return penalties
 
-def reward_bleu_penalty(completions, **kwargs):
-    completion_contents = [completion[0]["content"] for completion in completions]
-    references = prompts_to_references(kwargs['prompts'])
-    bleu_scores = []
-    for i, (comp, ref) in enumerate(zip(completion_contents, references)):
-        lang = kwargs['language'][i]
-        comp_sentences = split_sentence(comp, lang)
-        ref_sentences = split_sentence(ref, lang)
-        res = bleu_assessor[lang].corpus_score(comp_sentences, [ref_sentences]).score
-        bleu_scores.append(res / 100.0)  # normalize to [0, 1]
-    return bleu_scores
+# def reward_bleu_penalty(completions, **kwargs):
+#     completion_contents = [completion[0]["content"] for completion in completions]
+#     references = prompts_to_references(kwargs['prompts'])
+#     bleu_scores = []
+#     for i, (comp, ref) in enumerate(zip(completion_contents, references)):
+#         lang = kwargs['language'][i]
+#         comp_sentences = split_sentence(comp, lang)
+#         ref_sentences = split_sentence(ref, lang)
+#         res = bleu_assessor[lang].corpus_score(comp_sentences, [ref_sentences]).score
+#         bleu_scores.append(res / 100.0)  # normalize to [0, 1]
+#     return bleu_scores
 
 def reward_length_ratio(completions, **kwargs):
     texts = [c[0]["content"] for c in completions]
@@ -207,7 +226,7 @@ def reward_length_ratio(completions, **kwargs):
             continue
         length_ratio = comp_len / ref_len
         # quadratic reward centered at 1.0
-        reward = 1.0 - (length_ratio - 1.0) ** 2
+        reward = max(0.0, 1.0 - (length_ratio - 1.0) ** 2)
         rewards.append(reward)
     return rewards
 
@@ -254,7 +273,7 @@ def reward_cefr_level(completions, **kwargs):
     return rewards
 
 def main():
-    global tokenizer, bertscorer, level_assessor, bleu_assessor, spacy_nlp
+    global tokenizer, bertscorer, level_assessor, spacy_nlp
 
     # Load dataset
     dataset = load_from_disk("data/wikipedia/dataset/all")
@@ -280,12 +299,6 @@ def main():
 
     # Init auxiliary evaluators
     level_assessor = LevelAssessor(weight=1.0)
-    bleu_assessor = {
-        'en': BLEU(),
-        'ja': BLEU(tokenize='ja-mecab'),
-        'ko': BLEU(tokenize='ko-mecab'),
-        'zh': BLEU(tokenize='zh')
-    }
     spacy_nlp = {
         'en': level_assessor.nlp['en'],
         'ja': level_assessor.nlp['ja'],
@@ -326,14 +339,21 @@ def main():
         logging_strategy="steps",
         logging_steps=5,
         save_steps=200,
-        # weights for [cefr_level, bertscore, entailment, lm_fluency, length_ratio, bleu_penalty, ngram_repetition_penalty]
-        reward_weights=[3.0, 1.0, 1.0, 1.0, 0.2, -0.2, -3.0],
+        # weights for [cefr_level, bertscore, entailment, lm_fluency, length_ratio, distinct_n]
+        reward_weights=[3.0, 1.2, 2.0, 0.8, 0.3, 0.8],
     )
 
     # Trainer
     trainer = GRPOTrainer(
         model=model,
-        reward_funcs=[reward_cefr_level, reward_bertscore, reward_entailment, reward_lm_fluency, reward_length_ratio, reward_bleu_penalty, reward_ngram_repetition_penalty],
+        reward_funcs=[
+            reward_cefr_level,
+            reward_bertscore,
+            reward_entailment,
+            reward_lm_fluency,
+            reward_length_ratio,
+            reward_distinct_n,
+        ],
         args=training_args,
         train_dataset=dataset,
         peft_config=lora_config,

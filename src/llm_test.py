@@ -4,7 +4,7 @@ from transformers import AutoTokenizer
 
 def main():
     # model_id = "Qwen/Qwen3-4B-Instruct-2507"
-    model_id = "results/grpo/Qwen3-4B-Instruct-2507-GRPO/checkpoint-600-merged"
+    model_id = "results/grpo/Qwen3-4B-Instruct-2507-GRPO/checkpoint-2200-merged"
 
     sampling_params = SamplingParams(max_tokens=1024)
     llm = LLM(model_id, max_model_len=1024)
@@ -68,3 +68,6 @@ if __name__ == "__main__":
 # We can say “philosophy” – we find it from old Greek words – we can find the meaning “love of wisdom” – we can find in the group – – we can say – – philosophy – – – from the word group – – – – we can find it – – – “philosophy” – – we think about – life, and also about reason or knowledge, we can find in the sentence – – we can say yes – so we can say it’s a nice group – we can find in the English sentence – yes, we can say it’s true.
 # 철학이라는 단어를 말할 때, 우리는 "필로소피아"라고 하기도 하면서, 이것은 고대 그리스어에서 비롯된다고 생각해요 – 우리는 그거를 찾아보면, 지혜를 이야기하는 부분에서 나오는 것이라고 생각해요 – 이 문장에서 말하는 ‘지혜’는, 우리 평상시에 쓰는 지식이 아니라, 인간 자신을 보고, 그리고 그 세계를 보는 것을 말하는 걸로 생각해요 – 우리는 그걸 발견할 수 있죠. 그렇게 말하면, 예를 들어서 “세계관”이라는 것, 그리고 “인생관”, 그리고 “가치관”을 살펴볼 수 있는 예를 주면, 우리는 철학 안에 포함되는 게 된다고 생각할 수 있어요 – 그래서 우리는 그 예를 보면 아주 잘 설명할 수 있다고 생각해요, 그래서 그 문장에서 우리는 ‘철학’을 살펴보면 좋을 것 같아요 – 그래서 우리는 그 것을 찾을 수 있죠 – 우리는 그게 좋다 라고 생각해요.
 # たった過去の歴史の中で、物理のことがり、心理のことがり、など、たくさんある科学たち（例えば物理学や心理学）が、哲学というグループの部分から生まれたと、私たちは言えると思っています – これは真実なんだ。
+
+# grpo-qwen1.7b
+# The, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in, a, thing, in,
