@@ -4,7 +4,7 @@ from transformers import AutoTokenizer
 
 def main():
     # model_id = "Qwen/Qwen3-4B-Instruct-2507"
-    model_id = "results/grpo/Qwen3-4B-Instruct-2507-GRPO/checkpoint-2200-merged"
+    model_id = "results/grpo/Qwen3-4B-Instruct-2507-GRPO/checkpoint-600-merged"
 
     sampling_params = SamplingParams(max_tokens=1024)
     llm = LLM(model_id, max_model_len=1024)

@@ -6,6 +6,7 @@ import os
 from bert_score import BERTScorer
 import torch
 from level_assessment import LevelAssessor
+import math
 
 torch.manual_seed(42)
 os.environ.setdefault("WANDB_PROJECT", "text-simplification")
@@ -113,12 +114,12 @@ def _tokenize_for_distinct_batch(texts, langs):
     for lang, idxs in by_lang.items():
         nlp = spacy_nlp[lang]
         for i_doc, doc in zip(idxs, nlp.pipe([texts[i] for i in idxs], batch_size=16, n_process=1)):
-            out[i_doc] = [t.text.lower() for t in doc if not t.is_space]
+            out[i_doc] = [t.text.lower() for t in doc if (not t.is_space and not t.is_punct)]
     return out
 
 def _distinct_n(tokens, n):
     if len(tokens) < n:
-        return 1.0
+        return 0.0
     total = max(1, len(tokens) - n + 1)
     uniq = len({tuple(tokens[i:i+n]) for i in range(total)})
     return uniq / total
@@ -243,13 +244,8 @@ def reward_lm_fluency(completions, **kwargs):
                 continue
             out = model(**enc, labels=enc["input_ids"])
             loss = float(out.loss)
-            scores.append(1.0 / (1.0 + loss))  # small loss -> high score
+            scores.append(1.0 / (1.0 + loss))
     return scores
-
-# def penalize_score(s):
-#     tau = 0.95
-#     r = 1 - ((s - tau) ** 2) / (tau ** 2) # quadratic penalty
-#     return r
 
 def reward_bertscore(completions, **kwargs):
     # Compute BERTScore F1 between completions and reference text in prompt and return as rewards
@@ -265,12 +261,17 @@ def reward_bertscore(completions, **kwargs):
     # bertscores = [penalize_score(score) for score in bertscores]
     return bertscores
 
-def reward_cefr_level(completions, **kwargs):
+def reward_vocab_level(completions, **kwargs):
     completion_contents = [completion[0]["content"] for completion in completions]
     levels = kwargs['level']
     langs = kwargs['language']
-    rewards = level_assessor.reward_cefr_level(completion_contents, levels, langs)
-    return rewards
+    return level_assessor.reward_vocab_level(completion_contents, levels, langs)
+
+def reward_unique_words(completions, **kwargs):
+    completion_contents = [completion[0]["content"] for completion in completions]
+    levels = kwargs['level']
+    langs = kwargs['language']
+    return level_assessor.reward_unique_words(completion_contents, levels, langs)
 
 def main():
     global tokenizer, bertscorer, level_assessor, spacy_nlp
@@ -298,7 +299,7 @@ def main():
     )
 
     # Init auxiliary evaluators
-    level_assessor = LevelAssessor(weight=1.0)
+    level_assessor = LevelAssessor()
     spacy_nlp = {
         'en': level_assessor.nlp['en'],
         'ja': level_assessor.nlp['ja'],
@@ -339,15 +340,16 @@ def main():
         logging_strategy="steps",
         logging_steps=5,
         save_steps=200,
-        # weights for [cefr_level, bertscore, entailment, lm_fluency, length_ratio, distinct_n]
-        reward_weights=[3.0, 1.2, 2.0, 0.8, 0.3, 0.8],
+        # weights for [vocab_level, unique_words, bertscore, entailment, lm_fluency, length_ratio, distinct_n]
+        reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 0.5, 1.0],
     )
 
     # Trainer
     trainer = GRPOTrainer(
         model=model,
         reward_funcs=[
-            reward_cefr_level,
+            reward_vocab_level,
+            reward_unique_words,
             reward_bertscore,
             reward_entailment,
             reward_lm_fluency,

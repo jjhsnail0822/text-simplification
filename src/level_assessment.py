@@ -7,8 +7,8 @@ import os
 import torch
 
 class LevelAssessor:
-    def __init__(self, weight = 1.0):
-        self.weight = weight
+    def __init__(self, unique_weight: float = 0.2):
+        self.unique_weight = unique_weight
         self.LEVEL_CONVERT = {
             "en": {
                 "CEFR A1": "A1",
@@ -95,11 +95,15 @@ class LevelAssessor:
         self.stopwords['zh'] = set(nltk.corpus.stopwords.words("chinese"))
         self.nlp['zh'] = spacy.load("zh_core_web_trf", exclude=["ner"])
         
-    def reward_cefr_level(self, completions, levels, langs):
-        levels = [self.LEVEL_CONVERT[langs[i]][levels[i]] for i in range(len(levels))]
-        rewards = []
+        # Simple single-entry cache for per-batch spaCy docs
+        self._cache_key = None
+        self._cache_docs = None
 
-        # process documents by language and relocate to original order
+    def _get_docs_cached(self, completions, langs):
+        key = (tuple(completions), tuple(langs))
+        if self._cache_key == key and self._cache_docs is not None:
+            return self._cache_docs
+
         docs = [None] * len(completions)
         by_lang = {}
         for i, lang in enumerate(langs):
@@ -110,50 +114,79 @@ class LevelAssessor:
             for i_doc, doc in zip(idxs, nlp.pipe(texts, batch_size=8, n_process=1)):
                 docs[i_doc] = doc
 
+        self._cache_key = key
+        self._cache_docs = docs
+        return docs
+
+    def _counts_from_doc(self, doc, lang):
+        lemma_text = " ".join([token.lemma_.lower() for token in doc])
+
+        # spacy does not split compound words in Korean, so replace + with space
+        if lang == 'ko':
+            lemma_text = lemma_text.replace("+", " ")
+
+        counts = Counter()
+
+        # English: first match phrases, then remove them and handle single tokens
+        if lang == 'en' and self.phrases:
+            for m in self.pattern.finditer(lemma_text):
+                matched = m.group(1)
+                if matched in self.word_level_dict[lang]:
+                    counts[matched] += 1
+            lemma_text = self.pattern.sub("", lemma_text)
+
+        lemma_text = re.sub(r"\s{2,}", " ", lemma_text).strip()
+
+        # then remove stopwords and match single words
+        for token in lemma_text.split():
+            if token in self.stopwords[lang]:
+                continue
+            if token in self.word_level_dict[lang]:
+                counts[token] += 1
+
+        return counts
+
+    def _level_stats(self, counts, target_idx, lang):
+        # frequency-based ratio at or under target level
+        level_counts = {lvl: 0 for lvl in self.LEVEL_ORDER[lang].keys()}
+        for tok, cnt in counts.items():
+            lvl = self.word_level_dict[lang][tok]["level"]
+            level_counts[lvl] += cnt
+
+        total_freq = sum(level_counts.values())
+        freq_reward = (
+            sum(c for lvl, c in level_counts.items() if self.LEVEL_ORDER[lang][lvl] <= target_idx) / total_freq
+            if total_freq > 0 else 0.0
+        )
+
+        # unique-type coverage ratio
+        unique_total = len(counts)
+        unique_easy = 0
+        for tok in counts.keys():
+            lvl = self.word_level_dict[lang][tok]["level"]
+            if self.LEVEL_ORDER[lang][lvl] <= target_idx:
+                unique_easy += 1
+        coverage_reward = (unique_easy / unique_total) if unique_total > 0 else 0.0
+        return freq_reward, coverage_reward
+
+    def reward_vocab_level(self, completions, levels, langs):
+        levels = [self.LEVEL_CONVERT[langs[i]][levels[i]] for i in range(len(levels))]
+        docs = self._get_docs_cached(completions, langs)
+        rewards = []
         for i, doc in enumerate(docs):
-            lemma_text = " ".join([token.lemma_.lower() for token in doc])
-            counts = Counter()
+            target_idx = self.LEVEL_ORDER[langs[i]][levels[i]]
+            counts = self._counts_from_doc(doc, langs[i])
+            freq_reward, _ = self._level_stats(counts, target_idx, langs[i])
+            rewards.append(freq_reward)
+        return rewards
 
-            # spacy does not split compound words in Korean, so replace + with space
-            if langs[i] == 'ko':
-                lemma_text = lemma_text.replace("+", " ")
-
-            # for English, first match phrases
-            if langs[i] == 'en':
-                for m in self.pattern.finditer(lemma_text):
-                    matched = m.group(1)
-                    if matched in self.word_level_dict[langs[i]]:
-                        counts[matched] += 1
-
-                lemma_text = self.pattern.sub("", lemma_text)
-            lemma_text = re.sub(r"\s{2,}", " ", lemma_text).strip()
-
-            # then remove stopwords and match single words
-
-            remaining_tokens = []
-            for token in lemma_text.split():
-                if token in self.stopwords[langs[i]]:
-                    continue
-                if token in self.word_level_dict[langs[i]]:
-                    counts[token] += 1
-                elif token.isalpha():  # alphabetic word
-                    remaining_tokens.append(token)
-
-            # CEFR/JLPT/TOPIK/HSK level counting
-            level_counts = {lvl: 0 for lvl in self.LEVEL_ORDER[langs[i]].keys()}
-            for tok, cnt in counts.items():
-                lvl = self.word_level_dict[langs[i]][tok]["level"]
-                level_counts[lvl] += cnt
-
-            # # print word by word, for debugging with PoS and level
-            # for token in doc:
-            #     lvl = self.word_level_dict[langs[i]].get(token.text, {}).get("level", "unknown")
-            #     print(f"{token.text}\t{token.lemma_}\t{token.pos_}\t{lvl}")
-
-            # Compute reward based on level
-            count_under_or_equal = sum(count for lvl, count in level_counts.items() if self.LEVEL_ORDER[langs[i]][lvl] <= self.LEVEL_ORDER[langs[i]][levels[i]])
-            total_count = sum(level_counts.values())
-            reward = count_under_or_equal / total_count if total_count > 0 else 0.0
-            rewards.append(reward * self.weight)
-
+    def reward_unique_words(self, completions, levels, langs):
+        levels = [self.LEVEL_CONVERT[langs[i]][levels[i]] for i in range(len(levels))]
+        docs = self._get_docs_cached(completions, langs)
+        rewards = []
+        for i, doc in enumerate(docs):
+            target_idx = self.LEVEL_ORDER[langs[i]][levels[i]]
+            counts = self._counts_from_doc(doc, langs[i])
+            _, coverage_reward = self._level_stats(counts, target_idx, langs[i])
+            rewards.append(coverage_reward)
         return rewards
