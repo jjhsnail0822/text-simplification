@@ -7,8 +7,7 @@ import os
 import torch
 
 class LevelAssessor:
-    def __init__(self, unique_weight: float = 0.2):
-        self.unique_weight = unique_weight
+    def __init__(self):
         self.LEVEL_CONVERT = {
             "en": {
                 "CEFR A1": "A1",
@@ -119,7 +118,11 @@ class LevelAssessor:
         return docs
 
     def _counts_from_doc(self, doc, lang):
-        lemma_text = " ".join([token.lemma_.lower() for token in doc])
+        if lang == 'zh':
+            # for Chinese, use characters directly
+            lemma_text = " ".join([token.text.lower() for token in doc])
+        else:
+            lemma_text = " ".join([token.lemma_.lower() for token in doc])
 
         # spacy does not split compound words in Korean, so replace + with space
         if lang == 'ko':
@@ -190,3 +193,17 @@ class LevelAssessor:
             _, coverage_reward = self._level_stats(counts, target_idx, langs[i])
             rewards.append(coverage_reward)
         return rewards
+
+
+l = LevelAssessor()
+
+l.reward_vocab_level(
+    completions=[
+        "This is a simple test sentence.",
+        "複雑な文章を解析します。",
+        "이 말은 한국말로 썼어요.",
+        "这是一个中文测试句子。我爱学习中文。"
+    ],
+    levels=["CEFR A2", "JLPT N4", "TOPIK I", "HSK 3.0 Level 2"],
+    langs=["en", "ja", "ko", "zh"]
+)

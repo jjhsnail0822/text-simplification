@@ -20,7 +20,7 @@ level_assessor = None
 spacy_nlp = None
 
 # Lazy init for evaluator vLLM (created on first reward call per process)
-evaluator_model_id = "Qwen/Qwen3-0.6B"
+evaluator_model_id = "Qwen/Qwen3-1.7B"
 _evaluator_hf_model = None
 _evaluator_hf_tokenizer = None
 _evaluator_device = None
@@ -321,7 +321,7 @@ def main():
 
     # Training configuration
     training_args = GRPOConfig(
-        output_dir="results/grpo/Qwen3-4B-Instruct-2507-GRPO",
+        output_dir="results/grpo/Qwen3-4B-Instruct-2507-GRPO-qwen-1.7b",
         use_vllm=True,
         vllm_mode="colocate",
         max_prompt_length=MAX_PROMPT_LENGTH,
