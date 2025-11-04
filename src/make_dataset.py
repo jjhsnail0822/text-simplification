@@ -78,6 +78,9 @@ for lang in LANGS:
 
 random.shuffle(dataset)
 dataset = Dataset.from_list(dataset)
-os.makedirs(save_path, exist_ok=True)
 
-dataset.save_to_disk(os.path.join(save_path))
+# split into train/test sets
+dataset = dataset.train_test_split(test_size=0.1, seed=42)
+
+os.makedirs(save_path, exist_ok=True)
+dataset.save_to_disk(save_path)

@@ -6,12 +6,15 @@ import os
 from bert_score import BERTScorer
 import torch
 from level_assessment import LevelAssessor
+import re
 
 torch.manual_seed(42)
 os.environ.setdefault("WANDB_PROJECT", "text-simplification")
 
 MAX_PROMPT_LENGTH = 512
 MAX_COMPLETION_LENGTH = 512
+
+MODEL_ID = "Qwen/Qwen3-4B-Instruct-2507"
 
 # Global placeholders (will be initialized in main)
 tokenizer = None
@@ -20,11 +23,18 @@ level_assessor = None
 spacy_nlp = None
 
 # Lazy init for evaluator vLLM (created on first reward call per process)
-evaluator_model_id = "Qwen/Qwen3-0.6B"
+evaluator_model_id = "Qwen/Qwen3-4B-Instruct-2507"
 _evaluator_hf_model = None
 _evaluator_hf_tokenizer = None
 _evaluator_device = None
 _evaluator_dtype = None
+
+LANGUAGE_CHARSETS = {
+    "en": re.compile(r"[A-Za-z]"),
+    "ja": re.compile(r"[\u3040-\u30FF]"),
+    "ko": re.compile(r"[\uAC00-\uD7AF\u1100-\u11FF]"),
+    "zh": re.compile(r"[\u4E00-\u9FFF]"),
+}
 
 def _get_local_device():
     if torch.cuda.is_available():
@@ -47,46 +57,37 @@ def get_evaluator_hf_gpu():
         _evaluator_hf_model.eval()
     return _evaluator_hf_model, _evaluator_hf_tokenizer, _evaluator_device, _evaluator_dtype
 
-def _apply_chat_template_batch(messages_batch, tok):
-    rendered = []
-    for msgs in messages_batch:
+def _hf_chat_batch(messages_batch):
+    model, tok, device, dtype = get_evaluator_hf_gpu()
+    results = []
+    for messages in messages_batch:
         text = tok.apply_chat_template(
-            msgs,
+            messages,
             tokenize=False,
             add_generation_prompt=True,
             padding=False,
             enable_thinking=False,
         )
-        rendered.append(text)
-    return rendered
+        enc = tok(
+            text,
+            return_tensors="pt",
+            truncation=True,
+            max_length=MAX_PROMPT_LENGTH - 10,
+        ).to(device)
 
-def _hf_chat_batch(messages_batch):
-    model, tok, device, dtype = get_evaluator_hf_gpu()
-    inputs_text = _apply_chat_template_batch(messages_batch, tok)
+        with torch.no_grad():
+            gen = model.generate(
+                **enc,
+                max_new_tokens=1,
+                do_sample=False,
+                pad_token_id=tok.eos_token_id,
+            )
 
-    enc = tok(
-        inputs_text,
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=MAX_PROMPT_LENGTH - 10,
-    ).to(device)
-
-    with torch.no_grad():
-        gen = model.generate(
-            **enc,
-            max_new_tokens=3,
-            do_sample=False,
-            pad_token_id=tok.eos_token_id,
-        )
-
-    input_lengths = enc["attention_mask"].sum(dim=1)
-    texts = []
-    for i in range(gen.size(0)):
-        new_tokens = gen[i, input_lengths[i]:]
+        input_length = enc["attention_mask"].sum(dim=1)[0]
+        new_tokens = gen[0, input_length:]
         txt = tok.decode(new_tokens, skip_special_tokens=True).strip()
-        texts.append(txt)
-    return texts
+        results.append(txt)
+    return results
 
 # Truncate long inputs using the global tokenizer
 def truncate_prompt(example):
@@ -104,6 +105,40 @@ def split_sentence(text, lang):
     doc = nlp(text)
     sentences = [sent.text for sent in doc.sents]
     return sentences
+
+def _disallowed_chars_ratio(text, lang, parenthesis=True):
+    # Calculate the ratio of disallowed characters in the text for the given language
+    # if parenthesis is True, ignore characters inside parentheses
+    # for en, disallow ja, ko, zh characters
+    # for ja, disallow en, ko characters
+    # for ko, disallow en, ja, zh characters
+    # for zh, disallow en, ja, ko characters
+    # for ja, ko, zh, disallow en simple words in wordlist_en.csv
+    if lang == 'en':
+        disallowed_chars = LANGUAGE_CHARSETS['ja'].pattern + '|' + LANGUAGE_CHARSETS['ko'].pattern + '|' + LANGUAGE_CHARSETS['zh'].pattern
+    elif lang == 'ja':
+        disallowed_chars = LANGUAGE_CHARSETS['en'].pattern + '|' + LANGUAGE_CHARSETS['ko'].pattern
+    elif lang == 'ko':
+        disallowed_chars = LANGUAGE_CHARSETS['en'].pattern + '|' + LANGUAGE_CHARSETS['ja'].pattern + '|' + LANGUAGE_CHARSETS['zh'].pattern
+    elif lang == 'zh':
+        disallowed_chars = LANGUAGE_CHARSETS['en'].pattern + '|' + LANGUAGE_CHARSETS['ja'].pattern + '|' + LANGUAGE_CHARSETS['ko'].pattern
+    if parenthesis:
+        text = re.sub(r'\(.*?\)', '', text)  # remove text inside parentheses
+    total_chars = len(text)
+    if total_chars == 0:
+        return 0.0
+    disallowed_chars = len(re.findall(disallowed_chars, text))
+    return disallowed_chars / total_chars
+
+def reward_language_purity(completions, **kwargs):
+    texts = [c[0]["content"] for c in completions]
+    langs = kwargs["language"]
+    rewards = []
+    for text, lang in zip(texts, langs):
+        ratio = _disallowed_chars_ratio(text, lang, parenthesis=True)
+        reward = max(0.0, 1.0 - ratio) # higher ratio -> lower reward
+        rewards.append(reward)
+    return rewards
 
 def _tokenize_for_distinct_batch(texts, langs):
     # out = [None] * len(texts)
@@ -134,9 +169,10 @@ def reward_distinct_n(completions, **kwargs):
     for toks in token_lists:
         d1 = _distinct_n(toks, 1)
         d2 = _distinct_n(toks, 2)
-        d3 = _distinct_n(toks, 3)
+        # d3 = _distinct_n(toks, 3)
         # Weighted sum; emphasize bigram/trigram to discourage phrase looping
-        r = 0.4 * d1 + 0.35 * d2 + 0.25 * d3
+        # r = 0.4 * d1 + 0.35 * d2 + 0.25 * d3
+        r = 0.5 * d1 + 0.5 * d2
         rewards.append(max(0.0, min(1.0, r)))
     return rewards
 
@@ -164,7 +200,6 @@ def reward_entailment(completions, **kwargs):
         sentences_ref = sentences_ref[:n_pairs]
 
         entailment_scores = []
-        total_num = len(sentences_comp) * 2 # each sentence pair has two directions
         batched_messages = []
         for sent_a, sent_b in zip(sentences_ref, sentences_comp):
             prompt_1 = prompt.format(sentence_a=sent_a, sentence_b=sent_b)
@@ -220,17 +255,30 @@ def prompts_to_references(prompts):
 def reward_length_ratio(completions, **kwargs):
     texts = [c[0]["content"] for c in completions]
     refs = prompts_to_references(kwargs['prompts'])
+    langs = kwargs["language"]
     rewards = []
-    for comp, ref in zip(texts, refs):
-        ref_len = len(tokenizer.tokenize(ref))
-        comp_len = len(tokenizer.tokenize(comp))
-        if ref_len == 0 or comp_len == 0:
+    for comp, ref, lang in zip(texts, refs, langs):
+        splitted_comp = split_sentence(comp, lang)
+        splitted_ref = split_sentence(ref, lang)
+        # Use the minimum number of sentence pairs
+        n_pairs = min(len(splitted_comp), len(splitted_ref))
+        if n_pairs == 0:
             rewards.append(0.0)
             continue
-        length_ratio = comp_len / ref_len
-        # quadratic reward centered at 1.0
-        reward = max(0.0, 1.0 - (length_ratio - 1.0) ** 2)
-        rewards.append(reward)
+        splitted_comp = splitted_comp[:n_pairs]
+        splitted_ref = splitted_ref[:n_pairs]
+        reward = []
+        for c_sent, r_sent in zip(splitted_comp, splitted_ref):
+             ref_len = len(tokenizer.tokenize(r_sent))
+             comp_len = len(tokenizer.tokenize(c_sent))
+             if ref_len == 0 or comp_len == 0:
+                 reward.append(0.0)
+                 continue
+             length_ratio = comp_len / ref_len
+             # Quadratic reward centered at 1.0
+             r = max(0.0, 1.0 - (length_ratio - 1.0) ** 2)
+             reward.append(r)
+        rewards.append(sum(reward) / len(reward))
     return rewards
 
 def reward_lm_fluency(completions, **kwargs):
@@ -280,9 +328,10 @@ def main():
 
     # Load dataset
     dataset = load_from_disk("data/wikipedia/dataset/all")
+    dataset = dataset["train"]
 
     # Init model/tokenizer
-    model_id = "Qwen/Qwen3-4B-Instruct-2507"
+    model_id = MODEL_ID
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         dtype="auto",
@@ -293,7 +342,7 @@ def main():
     # Init BERTScore scorer
     device_str = f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
     bertscorer = BERTScorer(
-        "xlm-roberta-large",
+        model_type="xlm-roberta-large",
         rescale_with_baseline=False,
         idf=False,
         device=device_str,
@@ -326,7 +375,7 @@ def main():
         vllm_mode="colocate",
         max_prompt_length=MAX_PROMPT_LENGTH,
         max_completion_length=MAX_COMPLETION_LENGTH,
-        learning_rate=3e-5,  # 5e-6
+        learning_rate=5e-6, # 3e-5
         optim="adamw_8bit",
         gradient_checkpointing_kwargs={"use_reentrant": False},
         num_generations=8,
@@ -342,8 +391,9 @@ def main():
         logging_strategy="steps",
         logging_steps=5,
         save_steps=200,
-        # weights for [vocab_level, unique_words, bertscore, entailment, length_ratio, distinct_n]
-        reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0],
+        # weights for [vocab_level, unique_words, bertscore, entailment, length_ratio, distinct_n, language_purity]
+        # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
+        reward_weights=[3.0, 1.0, 1.0, 2.0, 1.0, 1.0, 1.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
     )
 
@@ -355,9 +405,9 @@ def main():
             reward_unique_words,
             reward_bertscore,
             reward_entailment,
-            # reward_lm_fluency,
             reward_length_ratio,
             reward_distinct_n,
+            reward_language_purity,
         ],
         args=training_args,
         train_dataset=dataset,

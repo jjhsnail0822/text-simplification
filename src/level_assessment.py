@@ -195,15 +195,15 @@ class LevelAssessor:
         return rewards
 
 
-l = LevelAssessor()
+# l = LevelAssessor()
 
-l.reward_vocab_level(
-    completions=[
-        "This is a simple test sentence.",
-        "複雑な文章を解析します。",
-        "이 말은 한국말로 썼어요.",
-        "这是一个中文测试句子。我爱学习中文。"
-    ],
-    levels=["CEFR A2", "JLPT N4", "TOPIK I", "HSK 3.0 Level 2"],
-    langs=["en", "ja", "ko", "zh"]
-)
+# l.reward_vocab_level(
+#     completions=[
+#         "This is a simple test sentence.",
+#         "複雑な文章を解析します。",
+#         "이 말은 한국말로 썼어요.",
+#         "这是一个中文测试句子。我爱学习中文。"
+#     ],
+#     levels=["CEFR A2", "JLPT N4", "TOPIK I", "HSK 3.0 Level 2"],
+#     langs=["en", "ja", "ko", "zh"]
+# )
