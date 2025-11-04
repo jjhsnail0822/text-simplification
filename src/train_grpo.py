@@ -375,7 +375,7 @@ def main():
         vllm_mode="colocate",
         max_prompt_length=MAX_PROMPT_LENGTH,
         max_completion_length=MAX_COMPLETION_LENGTH,
-        learning_rate=5e-6, # 3e-5
+        learning_rate=3e-5, # 5e-6
         optim="adamw_8bit",
         gradient_checkpointing_kwargs={"use_reentrant": False},
         num_generations=8,
