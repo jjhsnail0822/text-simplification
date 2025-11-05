@@ -4,8 +4,9 @@ import spacy
 from tqdm import tqdm
 
 # Define level order so "lowest" can be computed robustly
-LEVEL_ORDER = ["TOPIK I", "TOPIK II"]
+LEVEL_ORDER = ["TOPIK1", "TOPIK2", "TOPIK3", "TOPIK4", "TOPIK5", "TOPIK6"]
 LEVEL_RANK = {lvl: i for i, lvl in enumerate(LEVEL_ORDER)}
+TEXT_TO_LEVEL = {'1급': 'TOPIK1', '2급': 'TOPIK2', '3급': 'TOPIK3', '4급': 'TOPIK4', '5급': 'TOPIK5', '6급': 'TOPIK6'}
 
 in_path = "data/wordlist_ko_raw.csv"
 out_path = "data/wordlist_ko.csv"
@@ -18,12 +19,7 @@ new_data = []
 for idx, row in tqdm(df.iterrows(), total=df.shape[0]):
     # remove except korean characters
     word = re.sub(r"[^가-힣]", "", row["어휘"])
-    if row['수준'] == '초급':
-        level = "TOPIK I"
-    elif row['수준'] == '중급':
-        level = "TOPIK II"
-    else:
-        raise ValueError(f"Unknown level: {row['수준']}")
+    level = TEXT_TO_LEVEL[row["등급"]]
     # lemmatize
     doc = nlp(word)
     for tok in doc:

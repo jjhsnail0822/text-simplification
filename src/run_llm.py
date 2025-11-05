@@ -39,7 +39,7 @@ def main():
     levels = {
         'en': ['CEFR A1', 'CEFR A2', 'CEFR B1', 'CEFR B2', 'CEFR C1', 'CEFR C2'],
         'ja': ['JLPT N5', 'JLPT N4', 'JLPT N3', 'JLPT N2', 'JLPT N1'],
-        'ko': ['TOPIK I', 'TOPIK II'],
+        'ko': ['TOPIK Level 1', 'TOPIK Level 2', 'TOPIK Level 3', 'TOPIK Level 4', 'TOPIK Level 5', 'TOPIK Level 6'],
         'zh': ['HSK 3.0 Level 1', 'HSK 3.0 Level 2', 'HSK 3.0 Level 3', 'HSK 3.0 Level 4', 'HSK 3.0 Level 5', 'HSK 3.0 Level 6', 'HSK 3.0 Level 7-9']
     }
 

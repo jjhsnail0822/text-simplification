@@ -31,12 +31,12 @@ def main():
     # levels = {
     #         'en': ['CEFR A1', 'CEFR A2', 'CEFR B1', 'CEFR B2', 'CEFR C1', 'CEFR C2'],
     #         'ja': ['JLPT N5', 'JLPT N4', 'JLPT N3', 'JLPT N2', 'JLPT N1'],
-    #         'ko': ['TOPIK I', 'TOPIK II'],
+    #         'ko': ['TOPIK 1', 'TOPIK 2', 'TOPIK 3', 'TOPIK 4', 'TOPIK 5', 'TOPIK 6'],
     #         'zh': ['HSK 3.0 Level 1', 'HSK 3.0 Level 2', 'HSK 3.0 Level 3', 'HSK 3.0 Level 4', 'HSK 3.0 Level 5', 'HSK 3.0 Level 6', 'HSK 3.0 Level 7-9']
     #     }
 
     results = []
-    output_path = f"results/llm_test/{model_id_name}.jsonl"
+    output_path = f"results/llm_test/{model_id_name}.json"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     sampling_params = SamplingParams(max_tokens=2048, temperature=0.0)

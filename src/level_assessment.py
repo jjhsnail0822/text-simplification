@@ -5,6 +5,7 @@ import spacy
 from collections import Counter
 import os
 import torch
+import string
 
 class LevelAssessor:
     def __init__(self):
@@ -25,8 +26,12 @@ class LevelAssessor:
                 "JLPT N1": "N1",
             },
             "ko": {
-                "TOPIK I": "TOPIK I",
-                "TOPIK II": "TOPIK II",
+                "TOPIK Level 1": "TOPIK1",
+                "TOPIK Level 2": "TOPIK2",
+                "TOPIK Level 3": "TOPIK3",
+                "TOPIK Level 4": "TOPIK4",
+                "TOPIK Level 5": "TOPIK5",
+                "TOPIK Level 6": "TOPIK6",
             },
             "zh": {
                 "HSK 3.0 Level 1": "HSK1",
@@ -46,7 +51,7 @@ class LevelAssessor:
                 "N5": 0, "N4": 1, "N3": 2, "N2": 3, "N1": 4
             },
             "ko": {
-                "TOPIK I": 0, "TOPIK II": 1
+                "TOPIK1": 0, "TOPIK2": 1, "TOPIK3": 2, "TOPIK4": 3, "TOPIK5": 4, "TOPIK6": 5
             },
             "zh": {
                 "HSK1": 0, "HSK2": 1, "HSK3": 2, "HSK4": 3, "HSK5": 4, "HSK6": 5, "HSK7-9": 6
@@ -88,7 +93,7 @@ class LevelAssessor:
         with open("data/stopwords/ja.txt", encoding='utf-8') as f: # https://www.ranks.nl/stopwords/
             self.stopwords['ja'] = set([line.strip() for line in f if line.strip()])
         self.nlp['ja'] = spacy.load("ja_core_news_trf", exclude=["ner"])
-        with open("data/stopwords/ko.txt", encoding='utf-8') as f: # https://www.ranks.nl/stopwords/
+        with open("data/stopwords/ko.txt", encoding='utf-8') as f: # 국립국어원
             self.stopwords['ko'] = set([line.strip() for line in f if line.strip()])
         self.nlp['ko'] = spacy.load("ko_core_news_lg", exclude=["ner"])
         self.stopwords['zh'] = set(nltk.corpus.stopwords.words("chinese"))
@@ -129,6 +134,7 @@ class LevelAssessor:
             lemma_text = lemma_text.replace("+", " ")
 
         counts = Counter()
+        unknown_counts = Counter()
 
         # English: first match phrases, then remove them and handle single tokens
         if lang == 'en' and self.phrases:
@@ -146,8 +152,15 @@ class LevelAssessor:
                 continue
             if token in self.word_level_dict[lang]:
                 counts[token] += 1
+            # punctuation (including zenkaku) and unknown words
+            elif token in string.punctuation or token in string.whitespace or token in '，。！？；：「」『』（）《》〈〉【】——…、．·':
+                continue
+            elif token.isdigit() or token in '１２３４５６７８９０':
+                continue
+            else:
+                unknown_counts[token] += 1
 
-        return counts
+        return counts, unknown_counts
 
     def _level_stats(self, counts, target_idx, lang):
         # frequency-based ratio at or under target level
@@ -178,7 +191,7 @@ class LevelAssessor:
         rewards = []
         for i, doc in enumerate(docs):
             target_idx = self.LEVEL_ORDER[langs[i]][levels[i]]
-            counts = self._counts_from_doc(doc, langs[i])
+            counts, _ = self._counts_from_doc(doc, langs[i])
             freq_reward, _ = self._level_stats(counts, target_idx, langs[i])
             rewards.append(freq_reward)
         return rewards
@@ -189,10 +202,23 @@ class LevelAssessor:
         rewards = []
         for i, doc in enumerate(docs):
             target_idx = self.LEVEL_ORDER[langs[i]][levels[i]]
-            counts = self._counts_from_doc(doc, langs[i])
+            counts, _ = self._counts_from_doc(doc, langs[i])
             _, coverage_reward = self._level_stats(counts, target_idx, langs[i])
             rewards.append(coverage_reward)
         return rewards
+
+    def evaluate_vocab_level(self, output, level, lang):
+        level = self.LEVEL_CONVERT[lang][level]
+        doc = self._get_docs_cached([output], [lang])[0]
+        counts, unknown_counts = self._counts_from_doc(doc, lang)
+        # return number of each level words and unk words
+        level_counts = {lvl: 0 for lvl in self.LEVEL_ORDER[lang].keys()}
+        total_count = sum(counts.values()) + sum(unknown_counts.values())
+        for tok, cnt in counts.items():
+            lvl = self.word_level_dict[lang][tok]["level"]
+            level_counts[lvl] += cnt
+        result = {"level_counts": level_counts, "unk_count": sum(unknown_counts.values()), "total_count": total_count}
+        return result
 
 
 # l = LevelAssessor()
