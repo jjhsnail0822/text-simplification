@@ -17,24 +17,26 @@ nlp = spacy.load("ko_core_news_lg")
 new_data = []
 
 for idx, row in tqdm(df.iterrows(), total=df.shape[0]):
-    # remove except korean characters
-    word = re.sub(r"[^가-힣]", "", row["어휘"])
-    level = TEXT_TO_LEVEL[row["등급"]]
-    # lemmatize
-    doc = nlp(word)
-    for tok in doc:
-        tok = tok.lemma_
-        # split compound words
-        words = re.split(r"\+", tok)
-        for word in words:
-            if word == "":
-                continue
-            new_data.append({
-                "Word": word,
-                "Level": level,
-                # "Guideword": row["길잡이말"],
-                # "Part of Speech": row["품사"],
-            })
+    wordlist = re.split(r"/|,|∙", row["어휘"])
+    for word in wordlist:
+        # remove except korean characters
+        word = re.sub(r"[^가-힣]", "", word)
+        level = TEXT_TO_LEVEL[row["등급"]]
+        # lemmatize
+        doc = nlp(word)
+        for tok in doc:
+            tok = tok.lemma_
+            # split compound words
+            word_toks = re.split(r"\+", tok)
+            for w in word_toks:
+                if w == "":
+                    continue
+                new_data.append({
+                    "Word": w,
+                    "Level": level,
+                    # "Guideword": row["길잡이말"],
+                    # "Part of Speech": row["품사"],
+                })
 
 # only remain the lowest level for each word
 cleaned_dict = {}
