@@ -3,7 +3,7 @@ import json
 import os
 from tqdm import tqdm
 
-file_list = [f for f in os.listdir("results/llm_test/") if f.endswith(".jsonl")]
+file_list = [f for f in os.listdir("results/llm_test/") if f.endswith(".json")]
 levelassessor = LevelAssessor()
 
 data = {}

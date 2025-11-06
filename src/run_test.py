@@ -7,7 +7,6 @@ from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams
 from dotenv import load_dotenv
 from pathlib import Path
-import sys
 from datasets import load_from_disk
 
 def main():

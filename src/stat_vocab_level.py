@@ -42,6 +42,8 @@ LEVEL_ORDER = {
     "zh": {"HSK1": 0, "HSK2": 1, "HSK3": 2, "HSK4": 3, "HSK5": 4, "HSK6": 5, "HSK7-9": 6},
 }
 
+LANGUAGES = ['en', 'ja', 'ko', 'zh']
+
 with open("results/llm_evaluation/vocab_level_results.json", 'r', encoding='utf-8') as f:
     vocab_level_results = json.load(f)
 
@@ -80,3 +82,17 @@ for model_name in vocab_level_results:
                 'avg_exact_level_score': avg_exact_level_score,
             }
     scores_summary[model_name] = lang_level_scores
+
+# sort level keys by LEVEL_ORDER
+# sort language keys by LANGUAGES
+for model_name in scores_summary:
+    print(f"Model: {model_name}")
+    for lang in LANGUAGES:
+        if lang in scores_summary[model_name]:
+            print(f"  Language: {lang}")
+            for level in sorted(scores_summary[model_name][lang], key=lambda x: LEVEL_ORDER[lang][x]):
+                avg_scores = scores_summary[model_name][lang][level]
+                print(f"    Level: {level} | Avg Below Level Score: {avg_scores['avg_below_level_score']:.4f} | Avg Exact Level Score: {avg_scores['avg_exact_level_score']:.4f}")
+
+with open("results/llm_evaluation/vocab_level_stats.json", 'w', encoding='utf-8') as f:
+    json.dump(scores_summary, f, ensure_ascii=False, indent=4)
