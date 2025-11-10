@@ -203,12 +203,17 @@ class RewardFunctionContainer:
         for i, (comp, ref) in enumerate(zip(completion_contents, references)):
             sentences_comp = self.split_sentence(comp, langs[i])
             sentences_ref = self.split_sentence(ref, langs[i])
-            n_pairs = min(len(sentences_comp), len(sentences_ref)) # use the minimum number of sentence pairs
-            if n_pairs == 0:
+            # n_pairs = min(len(sentences_comp), len(sentences_ref)) # use the minimum number of sentence pairs
+            # if n_pairs == 0:
+            #     rewards.append(0.0)
+            #     continue
+            # sentences_comp = sentences_comp[:n_pairs]
+            # sentences_ref = sentences_ref[:n_pairs]
+
+            if len(sentences_comp) != len(sentences_ref):
+                # Skip entailment reward if number of sentences do not match
                 rewards.append(0.0)
                 continue
-            sentences_comp = sentences_comp[:n_pairs]
-            sentences_ref = sentences_ref[:n_pairs]
 
             entailment_scores = []
             batched_messages = []
@@ -271,13 +276,19 @@ class RewardFunctionContainer:
         for comp, ref, lang in zip(texts, refs, langs):
             splitted_comp = self.split_sentence(comp, lang)
             splitted_ref = self.split_sentence(ref, lang)
-            # Use the minimum number of sentence pairs
-            n_pairs = min(len(splitted_comp), len(splitted_ref))
-            if n_pairs == 0:
+            # # Use the minimum number of sentence pairs
+            # n_pairs = min(len(splitted_comp), len(splitted_ref))
+            # if n_pairs == 0:
+            #     rewards.append(0.0)
+            #     continue
+            # splitted_comp = splitted_comp[:n_pairs]
+            # splitted_ref = splitted_ref[:n_pairs]
+
+            if len(splitted_comp) != len(splitted_ref):
+                # Skip length ratio reward if number of sentences do not match
                 rewards.append(0.0)
                 continue
-            splitted_comp = splitted_comp[:n_pairs]
-            splitted_ref = splitted_ref[:n_pairs]
+            
             reward = []
             for c_sent, r_sent in zip(splitted_comp, splitted_ref):
                 ref_len = len(tokenizer.tokenize(r_sent))
