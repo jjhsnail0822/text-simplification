@@ -7,7 +7,7 @@ from bert_score import BERTScorer
 import torch
 from level_assessment import LevelAssessor
 import re
-
+import mo_grpo
 torch.manual_seed(42)
 os.environ.setdefault("WANDB_PROJECT", "text-simplification")
 
@@ -35,7 +35,7 @@ LANGUAGE_CHARSETS = {
     "ko": re.compile(r"[\uAC00-\uD7AF\u1100-\u11FF]"),
     "zh": re.compile(r"[\u4E00-\u9FFF]"),
 }
-
+mo_grpo.use_mo_grpo() 
 class RewardFunctionContainer:
     def __init__(self):
         pass
