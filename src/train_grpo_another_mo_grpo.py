@@ -7,6 +7,7 @@ from bert_score import BERTScorer
 import torch
 from level_assessment import LevelAssessor
 import re
+import mo_grpo
 
 torch.manual_seed(42)
 os.environ.setdefault("WANDB_PROJECT", "text-simplification")
@@ -35,6 +36,8 @@ LANGUAGE_CHARSETS = {
     "ko": re.compile(r"[\uAC00-\uD7AF\u1100-\u11FF]"),
     "zh": re.compile(r"[\u4E00-\u9FFF]"),
 }
+
+mo_grpo.use_mo_grpo()
 
 class RewardFunctionContainer:
     def __init__(self):
@@ -394,7 +397,7 @@ def main():
 
     # Training configuration
     training_args = GRPOConfig(
-        output_dir="results/grpo/Qwen3-4B-Instruct-2507-GRPO",
+        output_dir="results/grpo/Qwen3-4B-Instruct-2507-GRPO-another-mo-grpo",
         use_vllm=True,
         vllm_mode="colocate",
         max_prompt_length=MAX_PROMPT_LENGTH,
@@ -417,7 +420,7 @@ def main():
         save_steps=200,
         # weights for [vocab_level, unique_words, bertscore, entailment, length_ratio, distinct_n, language_purity]
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
-        reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        reward_weights=[4.0, 1.5, 0.5, 1.5, 0.5, 1.0, 0.5],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
     )
 
