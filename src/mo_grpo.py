@@ -54,26 +54,22 @@ from transformers.utils import is_datasets_available, is_peft_available, is_rich
 
 from trl import GRPOTrainer
 
-from ..data_utils import (
+from trl.data_utils import (
     apply_chat_template,
     is_conversational,
     prepare_multimodal_messages,
-    prepare_multimodal_messages_vllm,
 )
-from ..extras.profiling import profiling_context, profiling_decorator
-from ..extras.vllm_client import VLLMClient
-from ..import_utils import is_liger_kernel_available, is_vllm_available
-from ..models import prepare_deepspeed, prepare_fsdp, prepare_peft_model, unwrap_model_for_generation
-from ..models.utils import _ForwardRedirection
-from .base_trainer import BaseTrainer
-from .callbacks import SyncRefModelCallback
-from .grpo_config import GRPOConfig
-from .utils import (
+from trl.extras.profiling import profiling_context, profiling_decorator
+from trl.extras.vllm_client import VLLMClient
+from trl.import_utils import is_liger_kernel_available, is_vllm_available
+from trl.models import prepare_deepspeed, prepare_fsdp, prepare_peft_model, unwrap_model_for_generation
+from trl.models.utils import _ForwardRedirection
+from trl.trainer.callbacks import SyncRefModelCallback
+from trl.trainer.grpo_config import GRPOConfig
+from trl.trainer.utils import (
     RepeatSampler,
     disable_dropout_in_model,
-    ensure_master_addr_port,
     entropy_from_logits,
-    get_config_model_id,
     identity,
     nanmax,
     nanmin,
