@@ -14,19 +14,18 @@
 
 #implements https://arxiv.org/pdf/2509.22047 via monkey patching GRPOTrainer
 
+import copy
 import inspect
 import os
+import re
 import textwrap
-import warnings
 from collections import defaultdict, deque
-from collections.abc import Callable
 from contextlib import nullcontext
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Optional, Union
 
 import datasets
-import pandas as pd
 import torch
 import torch.utils.data
 import transformers
@@ -45,20 +44,14 @@ from transformers import (
     PreTrainedModel,
     PreTrainedTokenizerBase,
     ProcessorMixin,
+    Trainer,
     TrainerCallback,
-    is_trackio_available,
     is_wandb_available,
 )
 from transformers.trainer_utils import seed_worker
-from transformers.utils import is_datasets_available, is_peft_available, is_rich_available
+from transformers.utils import is_datasets_available, is_flash_attn_2_available, is_peft_available, is_rich_available
 
-from trl import GRPOTrainer
-
-from trl.data_utils import (
-    apply_chat_template,
-    is_conversational,
-    prepare_multimodal_messages,
-)
+from trl.data_utils import apply_chat_template, is_conversational, maybe_apply_chat_template, prepare_multimodal_messages
 from trl.extras.profiling import profiling_context, profiling_decorator
 from trl.extras.vllm_client import VLLMClient
 from trl.import_utils import is_liger_kernel_available, is_vllm_available
@@ -70,6 +63,8 @@ from trl.trainer.utils import (
     RepeatSampler,
     disable_dropout_in_model,
     entropy_from_logits,
+    generate_model_card,
+    get_comet_experiment_url,
     identity,
     nanmax,
     nanmin,
@@ -80,11 +75,9 @@ from trl.trainer.utils import (
     shuffle_sequence_dict,
     split_pixel_values_by_grid,
     split_tensor_dict,
+    truncate_with_protected_tokens,
     unsplit_pixel_values_by_grid,
 )
-
-from typing import Any
-import torch
 def calc_mo_grpo_advantage(rewards,weights,b,g,f,use_weights=False):
     #print("MO GRPO ADVANTAGE CALCULATION")
     #reward dim : (Batch * group * function_count)
