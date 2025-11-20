@@ -79,14 +79,11 @@ from trl.trainer.utils import (
     truncate_with_protected_tokens,
     unsplit_pixel_values_by_grid,
 )
-
 if is_vllm_available():
-    from vllm import LLM, SamplingParams
+    from vllm import LLM,SamplingParams
     from vllm.sampling_params import GuidedDecodingParams
-
 if is_wandb_available():
     import wandb
-
 def calc_mo_grpo_advantage(rewards,weights,b,g,f,use_weights=False):
     #print("MO GRPO ADVANTAGE CALCULATION")
     #reward dim : (Batch * group * function_count)
@@ -136,7 +133,7 @@ def _generate_and_score_completions(
         add_special_tokens=False,
         **kwargs,
     )
-    prompt_inputs = super()._prepare_inputs(prompt_inputs)
+    prompt_inputs = super(GRPOTrainer,self)._prepare_inputs(prompt_inputs)
     prompt_ids, prompt_mask = prompt_inputs["input_ids"], prompt_inputs["attention_mask"]
 
     if self.max_prompt_length is not None:
@@ -505,7 +502,7 @@ def _generate_and_score_completions(
     if self.scale_rewards != "none":
         advantages = advantages / (std_rewards + 1e-4)
     '''
-    advantages = calc_mo_grpo_advantage(rewards,self.reward_weights.to(device),len(prompts)/self.num_generations,self.num_generations,len(self.reward_funcs))
+    advantages = calc_mo_grpo_advantage(rewards_per_func,self.reward_weights.to(device),len(prompts),self.num_generations,len(self.reward_funcs))
     # Slice to keep only the local part of the data
     process_slice = slice(
         self.accelerator.process_index * len(prompts),
