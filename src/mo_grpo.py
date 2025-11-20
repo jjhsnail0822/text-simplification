@@ -84,6 +84,7 @@ if is_vllm_available():
     from vllm.sampling_params import GuidedDecodingParams
 if is_wandb_available():
     import wandb
+GPU_COUNT = 4
 def calc_mo_grpo_advantage(rewards,weights,b,g,f,use_weights=False):
     #print("MO GRPO ADVANTAGE CALCULATION")
     #reward dim : (Batch * group * function_count)
@@ -502,7 +503,7 @@ def _generate_and_score_completions(
     if self.scale_rewards != "none":
         advantages = advantages / (std_rewards + 1e-4)
     '''
-    advantages = calc_mo_grpo_advantage(rewards_per_func,self.reward_weights.to(device),len(prompts),self.num_generations,len(self.reward_funcs))
+    advantages = calc_mo_grpo_advantage(rewards_per_func,self.reward_weights.to(device),batch_size * GPU_COUNT ,self.num_generations,len(self.reward_funcs))
     # Slice to keep only the local part of the data
     process_slice = slice(
         self.accelerator.process_index * len(prompts),
