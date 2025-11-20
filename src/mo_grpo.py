@@ -89,9 +89,9 @@ def calc_mo_grpo_advantage(rewards,weights,b,g,f,use_weights=False):
     #print("MO GRPO ADVANTAGE CALCULATION")
     #reward dim : (Batch * group * function_count)
     rewards_view = rewards.view(b,g,f)
-    mean_rewards = torch.repeat_interleave(rewards_view.nanmean(dim=1).unsqueeze(1),3,dim=1)
+    mean_rewards = torch.repeat_interleave(rewards_view.nanmean(dim=1).unsqueeze(1),g,dim=1)
     advantages = rewards_view - mean_rewards
-    std_rewards = torch.repeat_interleave(rewards_view.std(dim=1).unsqueeze(1),3,dim=1)
+    std_rewards = torch.repeat_interleave(rewards_view.std(dim=1).unsqueeze(1),g,dim=1)
     is_std_zero = torch.isclose(std_rewards, torch.zeros_like(std_rewards))
     advantages = advantages / (std_rewards + 1e-4)
     if use_weights:
