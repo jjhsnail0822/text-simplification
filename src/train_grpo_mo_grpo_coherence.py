@@ -145,10 +145,15 @@ class RewardFunctionContainer:
     
     def reward_text_coherence(self, completions, **kwargs):
         prompt = (
-            "Decide if the given {language} text makes sense in terms of coherence. "
-            "Answer with a single word: True or False.\n\n"
+            "Rate the coherence of the given {language} text on a scale from 0 to 10. "
+            "Answer with a single number (0-10) only, and say nothing else.\n\n"
             "[TEXT]\n{text}"
         )
+        # prompt = (
+        #     "Decide if the given {language} text makes sense in terms of coherence. "
+        #     "Answer with a single word: True or False.\n\n"
+        #     "[TEXT]\n{text}"
+        # )
         completion_contents = [completion[0]["content"] for completion in completions]
         langs = kwargs['language']
         rewards = []
@@ -159,7 +164,11 @@ class RewardFunctionContainer:
             batched_messages = [[{"role": "user", "content": prompt_filled}]]
             texts = self._hf_chat_batch(batched_messages)
             t = texts[0].strip().lower()
-            reward = 1.0 if "true" in t and "false" not in t else 0.0
+            # reward = 1.0 if "true" in t and "false" not in t else 0.0
+            # convert to score out of 10
+            score = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
+            score = max(0, min(10, score))
+            reward = score / 10.0
             rewards.append(reward)
         return rewards
 
