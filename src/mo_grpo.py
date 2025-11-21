@@ -503,7 +503,16 @@ def _generate_and_score_completions(
     if self.scale_rewards != "none":
         advantages = advantages / (std_rewards + 1e-4)
     '''
+
     advantages = calc_mo_grpo_advantage(rewards_per_func,self.reward_weights.to(device),batch_size * GPU_COUNT ,self.num_generations,len(self.reward_funcs))
+
+    # Not used for mo-grpo, just for logging
+    rewards = (rewards_per_func).nansum(dim=1)
+    mean_grouped_rewards = rewards.view(-1, self.num_generations).mean(dim=1)
+    mean_grouped_rewards = mean_grouped_rewards.repeat_interleave(self.num_generations, dim=0)
+    std_rewards = rewards.view(-1, self.num_generations).std(dim=1)
+    std_rewards = std_rewards.repeat_interleave(self.num_generations, dim=0)
+
     # Slice to keep only the local part of the data
     process_slice = slice(
         self.accelerator.process_index * len(prompts),
