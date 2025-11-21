@@ -512,7 +512,7 @@ def _generate_and_score_completions(
     mean_grouped_rewards = mean_grouped_rewards.repeat_interleave(self.num_generations, dim=0)
     std_rewards = rewards.view(-1, self.num_generations).std(dim=1)
     std_rewards = std_rewards.repeat_interleave(self.num_generations, dim=0)
-
+    is_std_zero = torch.isclose(std_rewards, torch.zeros_like(std_rewards))
     # Slice to keep only the local part of the data
     process_slice = slice(
         self.accelerator.process_index * len(prompts),
