@@ -97,6 +97,7 @@ def calc_mo_grpo_advantage(rewards,weights,b,g,f,use_weights=False):
     if use_weights:
         advantages = weights[None,None,...] * advantages
     advantages = advantages.sum(dim=2)
+    advantages = advantages.view(b*g)
     return advantages
 
 def _generate_and_score_completions(
