@@ -167,6 +167,7 @@ class RewardFunctionContainer:
             score = max(0, min(10, score))
             reward = score / 10.0
             rewards.append(reward)
+            print(f"Coherence evaluation ({language}): {comp}... => {t} => reward: {reward}")
         return rewards
 
     def reward_language_purity(self, completions, **kwargs):
@@ -430,7 +431,7 @@ def main():
 
     # Training configuration
     training_args = GRPOConfig(
-        output_dir="results/grpo/Qwen3-4B-Instruct-2507-GRPO-coherence",
+        output_dir="results/grpo/Qwen3-4B-Instruct-2507-GRPO-coherence-another-few-rewards",
         use_vllm=True,
         vllm_mode="colocate",
         max_prompt_length=MAX_PROMPT_LENGTH,
@@ -451,11 +452,9 @@ def main():
         logging_strategy="steps",
         logging_steps=5,
         save_steps=200,
-        # weights for [vocab_level, unique_words, bertscore, entailment, length_ratio, distinct_n, text_coherence]
+        # weights for [vocab_level, unique_words, bertscore, entailment, text_coherence]
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
-        # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-        beta = 0.1,
-        reward_weights=[3.0, 1.0, 1.0, 2.0, 1.0, 1.0, 2.0],
+        reward_weights=[4.0, 1.5, 0.5, 1.5, 2.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
     )
 
@@ -467,8 +466,8 @@ def main():
             r.reward_unique_words,
             r.reward_bertscore,
             r.reward_entailment,
-            r.reward_length_ratio,
-            r.reward_distinct_n,
+            # r.reward_length_ratio,
+            # r.reward_distinct_n,
             # r.reward_language_purity,
             r.reward_text_coherence,
         ],

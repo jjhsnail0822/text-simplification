@@ -85,7 +85,7 @@ if is_vllm_available():
 if is_wandb_available():
     import wandb
 GPU_COUNT = 4
-def calc_mo_grpo_advantage(rewards,weights,b,g,f,use_weights=False):
+def calc_mo_grpo_advantage(rewards,weights,b,g,f,use_weights=True):
     #print("MO GRPO ADVANTAGE CALCULATION")
     #reward dim : (Batch * group * function_count)
     rewards_view = rewards.view(b,g,f)
