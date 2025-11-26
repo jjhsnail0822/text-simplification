@@ -30,29 +30,34 @@ def get_wordlist_frequencies(input_path,output_path):
             frequencies.append({'word':word,'level':level,'frequency':frequency})
     with open(output_path,'w'):
         json.dump(frequencies,f)
-def make_frequency_dataset():
-    langs = ['en', 'ja', 'ko', 'zh']
+def make_frequency_dataset(langs = ['en', 'ja', 'ko', 'zh']):
+    
     for lang in langs:
+        print(f"making {lang} dataset")
         wordlist_path = f'data/wordlist_{lang}.csv'
-        output_path = f'data/frequency_data_{lang}.json'
+        output_path = f'data/frequencies/frequency_data_{lang}.json'
         get_wordlist_frequencies(wordlist_path,output_path)
+        print(f"finished making {lang} dataset")
 
-def get_unknown_frequencies():
+def get_unknown_frequencies(langs = ['en', 'ja', 'ko', 'zh']):
     unknown_token_finder = UnknownTokenFinder()
     langs = ['en', 'ja', 'ko', 'zh']
     for lang in langs:
         unknown_tokens = set()
         unknown_token_frequencies = {}
         files = glob.glob(f'data/wikipedia/parsed_wikitext/{lang}/*.json')
+        files.sort()
         print(f'{lang} has {len(files)} files')
         for file in tqdm.tqdm(files):
             with open(file) as f:
-                unknown_tokens |= unknown_token_finder.find_unknown_tokens([json.load(f)['plain_text']],[lang])
-        for token in unknown_tokens:
-            unknown_token_frequencies[token] = get_word_frequency(token)
-        with open(f'data/unknown_token_frequencies_{lang}.json') as f:
-            json.dump(f,unknown_token_frequencies)
+                unknown_tokens = unknown_token_finder.find_unknown_tokens([json.load(f)['plain_text']],[lang])
+            for token in unknown_tokens:
+                unknown_token_frequencies[token] = get_word_frequency(token)
+            with open(f'data/frequencies/{lang}/unknown_token_frequencies_{lang}_{file}.json') as f:
+                json.dump(f,unknown_token_frequencies)
 
 
 if __name__ == '__main__':
-    get_unknown_frequencies()
+    make_frequency_dataset(langs = ['en', 'ja', 'ko', 'zh'])
+    get_unknown_frequencies(langs = ['en', 'ja', 'ko', 'zh'])
+    
