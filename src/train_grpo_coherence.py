@@ -454,8 +454,8 @@ def main():
         # weights for [vocab_level, unique_words, bertscore, entailment, length_ratio, distinct_n, text_coherence]
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
         # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-        beta = 0.1,
-        reward_weights=[3.0, 1.0, 1.0, 2.0, 1.0, 1.0, 2.0],
+        beta = 0.01,
+        reward_weights=[4.0, 1.0, 1.0, 2.0, 1.0, 1.0, 2.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
     )
 
