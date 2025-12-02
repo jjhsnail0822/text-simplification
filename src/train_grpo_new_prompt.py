@@ -36,6 +36,13 @@ LANGUAGE_CHARSETS = {
     "zh": re.compile(r"[\u4E00-\u9FFF]"),
 }
 
+LANG_TO_LANGUAGE = {
+    "en": "English",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "zh": "Chinese",
+}
+
 class RewardFunctionContainer:
     def __init__(self):
         pass
@@ -132,6 +139,42 @@ class RewardFunctionContainer:
             return 0.0
         disallowed_chars = len(re.findall(disallowed_chars, text))
         return disallowed_chars / total_chars
+    
+    def reward_text_coherence(self, completions, **kwargs):
+        prompt = (
+            "Rate the naturalness and fluency of the given {language} text on a scale from 0 to 10. "
+            "The text should flow naturally like it was written by a native speaker. "
+            "Penalize awkward or repetitive phrasing, or unnatural word choices. "
+            "Answer with a single number (0-10) only, and say nothing else.\n\n"
+            "[TEXT]\n{text}"
+        )
+        # prompt = (
+        #     "Rate the coherence of the given {language} text on a scale from 0 to 10. "
+        #     "Answer with a single number (0-10) only, and say nothing else.\n\n"
+        #     "[TEXT]\n{text}"
+        # )
+        # prompt = (
+        #     "Decide if the given {language} text makes sense in terms of coherence. "
+        #     "Answer with a single word: True or False.\n\n"
+        #     "[TEXT]\n{text}"
+        # )
+        completion_contents = [completion[0]["content"] for completion in completions]
+        langs = kwargs['language']
+        rewards = []
+
+        for i, comp in enumerate(completion_contents):
+            language = LANG_TO_LANGUAGE[langs[i]]
+            prompt_filled = prompt.format(language=language, text=comp)
+            batched_messages = [[{"role": "user", "content": prompt_filled}]]
+            texts = self._hf_chat_batch(batched_messages)
+            t = texts[0].strip().lower()
+            # reward = 1.0 if "true" in t and "false" not in t else 0.0
+            # convert to score out of 10
+            score = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
+            score = max(0, min(10, score))
+            reward = score / 10.0
+            rewards.append(reward)
+        return rewards
 
     def reward_language_purity(self, completions, **kwargs):
         texts = [c[0]["content"] for c in completions]
@@ -394,7 +437,7 @@ def main():
 
     # Training configuration
     training_args = GRPOConfig(
-        output_dir="results/grpo/Qwen3-4B-Instruct-2507-GRPO-another",
+        output_dir="results/grpo/Qwen3-4B-Instruct-2507-GRPO-new-prompt",
         use_vllm=True,
         vllm_mode="colocate",
         max_prompt_length=MAX_PROMPT_LENGTH,
@@ -415,9 +458,11 @@ def main():
         logging_strategy="steps",
         logging_steps=5,
         save_steps=200,
-        # weights for [vocab_level, unique_words, bertscore, entailment, length_ratio, distinct_n, language_purity]
+        # weights for [vocab_level, unique_words, bertscore, entailment, length_ratio, distinct_n, text_coherence]
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
-        reward_weights=[4.0, 1.5, 0.5, 1.5, 0.5, 1.0, 0.5],
+        # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        beta = 0.001,
+        reward_weights=[4.0, 1.0, 1.0, 2.0, 1.0, 1.0, 2.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
     )
 
@@ -431,7 +476,8 @@ def main():
             r.reward_entailment,
             r.reward_length_ratio,
             r.reward_distinct_n,
-            r.reward_language_purity,
+            # r.reward_language_purity,
+            r.reward_text_coherence,
         ],
         args=training_args,
         train_dataset=dataset,
