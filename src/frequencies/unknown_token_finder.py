@@ -223,9 +223,9 @@ class UnknownTokenFinder:
 
     def find_unknown_tokens(self, completions, langs)->set[str]:
         docs = self._get_docs_cached(completions, langs)
-        unknown_tokens = set()
+        unknown_tokens = []
         for i, doc in enumerate(docs):
             _ , unknown_counts = self._counts_from_doc(doc, langs[i])
-            unknown_tokens |= set(unknown_counts.keys())
+            unknown_tokens.extend(list(unknown_counts.keys()))
 
         return unknown_tokens
