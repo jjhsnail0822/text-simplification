@@ -7,7 +7,7 @@ import requests
 import tqdm
 from unknown_token_finder import UnknownTokenFinder
 
-SAVE_INTERVAL = 100
+SAVE_INTERVAL = 5
 from datasets import load_from_disk
 
 
@@ -35,12 +35,16 @@ def make_frequency_dataset(start_cnt = 0):
     langs = ['en', 'ja', 'ko', 'zh']
     output_path = f'data/frequencies/frequency_data.json'
     frequencies = {'en':[],'ja':[],'ko':[],'zh':[]} 
-    if start_cnt != 0:
+    try:
         with open(output_path[:-5] + '_intermediate' + '.json') as f:
             frequencies = json.load(f)
-    start_word_found = False
-    row_cnt = 0
+    except:
+        pass
+    
     for lang in langs:
+        start_word_found = False
+        row_cnt = 0
+        start_cnt = len(frequencies[lang])
         print(f"making {lang} dataset")
         wordlist_path = f'data/wordlist_{lang}.csv' 
         with open(wordlist_path) as f:
@@ -121,7 +125,7 @@ def get_unknown_token_frequencies():
 
 if __name__ == '__main__':
     os.makedirs('data/frequencies',exist_ok=True)
-    #make_frequency_dataset() # already done
+    make_frequency_dataset() # already done
     get_unknown_tokens() 
     get_unknown_token_frequencies()
 
