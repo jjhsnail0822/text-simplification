@@ -14,7 +14,7 @@ os.environ.setdefault("WANDB_PROJECT", "text-simplification")
 MAX_PROMPT_LENGTH = 512
 MAX_COMPLETION_LENGTH = 512
 
-MODEL_ID = "Qwen/Qwen3-4B-Instruct-2507"
+MODEL_ID = "google/gemma-3-4b-it"
 
 # Global placeholders (will be initialized in main)
 tokenizer = None
@@ -23,7 +23,7 @@ level_assessor = None
 spacy_nlp = None
 
 # Lazy init for evaluator vLLM (created on first reward call per process)
-evaluator_model_id = "Qwen/Qwen3-4B-Instruct-2507"
+evaluator_model_id = "google/gemma-3-4b-it"
 _evaluator_hf_model = None
 _evaluator_hf_tokenizer = None
 _evaluator_device = None
@@ -404,15 +404,15 @@ def main():
     )
     tokenizer = AutoTokenizer.from_pretrained(model_id)
 
-    # Init BERTScore scorer
-    device_str = f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
-    bertscorer = BERTScorer(
-        model_type="xlm-roberta-large",
-        rescale_with_baseline=False,
-        idf=False,
-        device=device_str,
-        batch_size=32,
-    )
+    # # Init BERTScore scorer
+    # device_str = f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
+    # bertscorer = BERTScorer(
+    #     model_type="xlm-roberta-large",
+    #     rescale_with_baseline=False,
+    #     idf=False,
+    #     device=device_str,
+    #     batch_size=32,
+    # )
 
     # Init auxiliary evaluators
     level_assessor = LevelAssessor()
@@ -437,7 +437,7 @@ def main():
 
     # Training configuration
     training_args = GRPOConfig(
-        output_dir="results/grpo/Qwen3-4B-Instruct-2507-GRPO-new-prompt",
+        output_dir="results/grpo/gemma-3-4b-it-GRPO",
         use_vllm=True,
         vllm_mode="colocate",
         max_prompt_length=MAX_PROMPT_LENGTH,
@@ -462,7 +462,7 @@ def main():
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
         # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         beta = 0.001,
-        reward_weights=[4.0, 1.0, 1.0, 2.0, 1.0, 1.0, 2.0],
+        reward_weights=[2.0, 1.0, 1.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
     )
 
@@ -471,11 +471,11 @@ def main():
         model=model,
         reward_funcs=[
             r.reward_vocab_level,
-            r.reward_unique_words,
-            r.reward_bertscore,
+            # r.reward_unique_words,
+            # r.reward_bertscore,
             r.reward_entailment,
-            r.reward_length_ratio,
-            r.reward_distinct_n,
+            # r.reward_length_ratio,
+            # r.reward_distinct_n,
             # r.reward_language_purity,
             r.reward_text_coherence,
         ],

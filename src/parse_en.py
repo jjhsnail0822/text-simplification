@@ -18,8 +18,8 @@ new_data = []
 for idx, row in tqdm(df.iterrows(), total=df.shape[0]):
     # lowercase
     word = row["Base Word"].lower()
-    # remove ", etc", "()", "be", "sth", "sb", "swh", "sb/sth"
-    word = re.sub(r", etc\.?|\(.*?\)|\bsth\b|\bsb\b|\bswh\b|\bbe\b|\bsb/sth\b", "", word).strip()
+    # remove ", etc", "()", "be", "sth", "sb", "swh", "sb/sth", "sb's", "'s"
+    word = re.sub(r", etc\.?|\(.*?\)|\bsth\b|\bsb\b|\bswh\b|\bbe\b|\bsb/sth\b|\bsb's\b|\'s\b", "", word).strip()
     # remove ?, !, ;, :, ,, "
     word = re.sub(r"[?!;:,\"]", "", word)
     # remove extra spaces

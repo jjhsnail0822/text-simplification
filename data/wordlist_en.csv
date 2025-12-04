@@ -7,28 +7,6 @@ Word,Level,Guideword,Part of Speech,Topic
 ' 70,B2,,phrase,
 ' 80,B2,,phrase,
 ' 90,B2,,phrase,
-'s,C2,,phrase,
-'s attention,C2,,phrase,
-'s bed,B2,,phrase,
-'s benefit,C2,,phrase,
-'s breadth of experience,C2,,phrase,
-'s call,B1,,phrase,
-'s clutch,C2,,phrase,
-'s fault,B1,,phrase,
-'s finance,B2,,phrase,money
-'s good,C2,,phrase,
-'s heart,C2,,phrase,
-'s look,C2,,phrase,people: appearance
-'s past,B1,,phrase,
-'s prospect,B2,,phrase,
-'s rescue,C2,,phrase,
-'s rise to fame,C2,,phrase,
-'s sake,B2,,phrase,
-'s strong point,C1,,phrase,people: personality
-'s travel,C1,,phrase,
-'s way of life,B1,,phrase,
-'s whereabouts,C2,,phrase,
-'s youth,B2,,phrase,people: appearance
 10,C2,,phrase,
 10 foot wide,B1,,phrase,
 100,C1,,phrase,
@@ -193,7 +171,7 @@ a slap in the face,C2,IDIOM,phrase,
 a sleepless night,C1,,phrase,
 a sore point,C2,IDIOM,phrase,
 a sound,B1,,phrase,
-a stone 's throw,C2,IDIOM,phrase,
+a stone throw,C2,IDIOM,phrase,
 a stream of,B2,,phrase,
 a string of,C2,,phrase,
 a stroke of luck,C2,,phrase,
@@ -356,7 +334,7 @@ afterward,A2,,adverb,
 again,A1,ONE MORE TIME,adverb,
 again and again,B1,,phrase,
 against,A2,COMPETING,preposition,
-against 's advice,C2,,phrase,
+against advice,C2,,phrase,
 against all odd,C2,,phrase,
 against the law,B2,,phrase,crime
 age,A1,HOW OLD,noun,
@@ -681,8 +659,6 @@ astonishing,B2,,adjective,people: personality
 astonishment,B2,,noun,people: personality
 astronomy,C2,,noun,natural world
 at,A1,PLACE,preposition,describing things
-at 's disposal,B2,,phrase,
-at 's expense,C2,,phrase,
 at a disadvantage,C2,,phrase,
 at a glance,C1,,phrase,
 at a loss,C2,,phrase,
@@ -692,9 +668,11 @@ at all,B1,,phrase,
 at all cost,B2,,phrase,
 at any price,C2,IDIOM,phrase,
 at any rate,C2,,phrase,communication
-at arm 's length,C2,IDIOM,phrase,
+at arm length,C2,IDIOM,phrase,
 at bay,C2,,phrase,
+at disposal,B2,,phrase,
 at ease,B2,,phrase,people: personality
+at expense,C2,,phrase,
 at face value,C1,IDIOM,phrase,
 at fault,B2,,phrase,
 at first,B1,,phrase,
@@ -902,7 +880,7 @@ beginner,A2,,noun,people: personality
 behave,B1,BE POLITE,verb,people: personality
 behavior,B1,,noun,
 behind,A1,BACK,preposition,describing things
-behind 's back,C2,,phrase,
+behind back,C2,,phrase,
 behind bar,B2,,phrase,
 behind close door,C2,IDIOM,phrase,
 behind the scene,C2,IDIOM,phrase,
@@ -1057,14 +1035,15 @@ brave,B1,,adjective,people: personality
 bravely,B1,,adverb,people: personality
 bravery,B2,,noun,people: personality
 bread,A1,,noun,food and drink
+breadth of experience,C2,,phrase,
 break,A2,SEPARATE,verb,
-break 's heart,B2,IDIOM,phrase,"people: personality, relationships"
 break a promise,B2,,phrase,communication
 break a record,B2,,phrase,people: actions
 break an agreement,B2,,phrase,
 break down,B1,,phrasal verb,technology
 break even,C1,,phrase,money
 break free,C2,,phrase,
+break heart,B2,IDIOM,phrase,"people: personality, relationships"
 break in or break into,B1,,phrasal verb,crime
 break off or break off,B2,,phrasal verb,
 break out,B2,,phrasal verb,
@@ -1273,7 +1252,7 @@ capitalism,C2,,noun,politics
 capitalist,C2,,adjective,politics
 captain,B1,SPORTS,noun,shopping
 capture,B2,CATCH,verb,people: actions
-capture 's attention,C1,,phrase,
+capture attention,C1,,phrase,
 car,A1,ROAD,noun,travel
 carbon,B2,,noun,natural world
 carbon dioxide,B2,,noun,natural world
@@ -1323,8 +1302,8 @@ cat,A1,,noun,animals
 catalog,B2,,noun,shopping
 catastrophe,C2,,noun,
 catch,A1,TAKE HOLD,verb,people: actions
-catch 's attention interest,B2,,phrase,communication
-catch 's eye,C2,IDIOM,phrase,
+catch attention interest,B2,,phrase,communication
+catch eye,C2,IDIOM,phrase,
 catch fire,B1,,phrase,
 catch off guard,C2,IDIOM,phrase,
 catch on,C1,BECOME POPULAR,phrasal verb,
@@ -1903,7 +1882,7 @@ crack up,C2,,phrasal verb,
 crackdown,C2,,noun,
 cracker,A1,,noun,food and drink
 craft,B2,,noun,arts and media
-cramp 's style,C2,,phrase,
+cramp style,C2,,phrase,
 crash,B1,VEHICLE,verb,"people: actions, travel"
 crave,C2,,verb,
 craving,C2,,noun,
@@ -1939,7 +1918,7 @@ criticize,B2,,verb,communication
 crocodile,B2,,noun,animals
 crop,B1,,noun,"food and drink, natural world"
 cross,A1,MARK,noun,communication
-cross 's path,C2,IDIOM,phrase,
+cross path,C2,IDIOM,phrase,
 cross your finger,C2,IDIOM,phrase,
 cross your mind,B2,,phrase,
 crossroad,B2,,noun,travel
@@ -2363,7 +2342,7 @@ diver,B1,,noun,shopping
 diverse,B2,,adjective,
 diversity,C1,,noun,
 divert,C2,CHANGE ROUTE,verb,travel
-divert 's attention,C1,,phrase,
+divert attention,C1,,phrase,
 divide,B1,SEPARATE,verb,people: actions
 divide among,C1,,phrase,people: actions
 diving,B1,,noun,"people: actions, shopping"
@@ -2485,7 +2464,7 @@ drive,A1,USE VEHICLE,verb,"people: actions, travel"
 drive crazy,B2,,phrase,people: personality
 drive to drive to do,C1,,phrase,
 driver,A2,,noun,"travel, work"
-driver 's license,A2,,noun,travel
+driver license,A2,,noun,travel
 drop,B1,FALL,verb,people: actions
 drop dead,C2,,phrase,
 drop it,C2,,phrase,communication
@@ -2764,7 +2743,7 @@ examination,A2,TEST,noun,education
 examine,B2,LOOK AT,verb,people: actions
 example,A1,TYPICAL CASE,noun,
 exceed,C1,BE MORE,verb,
-exceed 's expectation,C1,,phrase,
+exceed expectation,C1,,phrase,
 exceed the speed limit,C1,,phrase,
 excel,C2,,verb,
 excellent,A2,,adjective,describing things
@@ -2945,7 +2924,7 @@ father,A1,,noun,relationships
 father - in - law,B2,,noun,relationships
 fatty,C1,,adjective,food and drink
 faucet,B1,,noun,buildings
-fault,B2,BAD QUALITY,noun,
+fault,B1,,phrase,
 faultless,C2,,adjective,describing things
 faulty,B2,,adjective,describing things
 favor,B1,HELP,noun,
@@ -3035,8 +3014,8 @@ finish,A1,COMPLETE,verb,people: actions
 finish off or finish off,B2,,phrasal verb,people: actions
 finite,C2,,adjective,
 fire,A2,FLAMES,noun,
-fire 's imagination,C2,,phrase,
 fire department,B2,,noun,
+fire imagination,C2,,phrase,
 fire station,B1,,noun,buildings
 firefighter,B1,,noun,work
 fireplace,C2,,noun,
@@ -3111,9 +3090,9 @@ folder,A2,FOR PAPERS,noun,
 folk,B1,,noun,arts and media
 folk art,B1,,phrase,arts and media
 follow,A2,GO,verb,people: actions
-follow 's example,C2,,phrase,
 follow a street,A2,,phrase,"people: actions, travel"
-follow in 's footstep,C2,IDIOM,phrase,
+follow example,C2,,phrase,
+follow in footstep,C2,IDIOM,phrase,
 follow suit,C2,,phrase,
 follow up or follow up,B2,,phrasal verb,people: actions
 follower,C2,,noun,
@@ -3128,7 +3107,6 @@ foot the bill,C2,IDOM,phrase,
 football,A1,BALL,noun,shopping
 footstep,C1,,noun,
 for,A1,GIVEN/USED,preposition,
-for 's,B2,,phrase,
 for all,C2,,phrase,
 for day,B1,,phrase,
 for ever,B1,,phrase,
@@ -3383,7 +3361,7 @@ get move,C2,,phrase,
 get off,A2,,phrasal verb,travel
 get off your chest,C2,IDIOM,phrase,communication
 get on,A2,,phrasal verb,travel
-get on 's nerve,B2,,phrase,people: personality
+get on nerve,B2,,phrase,people: personality
 get on with,B2,,phrasal verb,
 get out,B1,LEAVE,phrasal verb,travel
 get out of,B2,,phrasal verb,people: actions
@@ -3519,7 +3497,7 @@ gossip,B2,,noun,communication
 govern,B2,,verb,"people: actions, politics"
 government,B1,GROUP,noun,politics
 grab,B1,TAKE WITH HAND,verb,people: actions
-grab 's attention,C1,,phrase,
+grab attention,C1,,phrase,
 grab the opportunity,C1,,phrase,
 grace,C1,MOVEMENT,noun,
 graceful,C1,MOVEMENT/SHAPE,adjective,describing things
@@ -3812,10 +3790,10 @@ hobby,A2,,noun,shopping
 hockey,A2,,noun,shopping
 hockey stick,B1,,phrase,shopping
 hold,A2,IN HAND,verb,people: actions
-hold 's attention,C1,,phrase,
 hold a conversation,C1,,phrase,
 hold against,C2,,phrasal verb,
 hold an opinion,C1,,phrase,
+hold attention,C1,,phrase,
 hold back or hold back,C1,NOT TELL,phrasal verb,
 hold down a job,C2,,phrasal verb,work
 hold hostage,C2,,phrase,
@@ -4013,13 +3991,8 @@ improvement,B1,BETTER,noun,
 impulse,C2,FEELING,noun,
 impulsive,C2,,adjective,people: personality
 in,A1,INSIDE,preposition,describing things
-in 's direction,B2,,phrase,
-in 's eye,B2,,phrase,
-in 's hand,C1,,phrase,
-in 's interest,C1,,phrase,
-in 's word,C2,,phrase,
 in a big way,C2,,phrase,
-in a day 's,B1,,phrase,
+in a day,B1,,phrase,
 in a dream,B2,,phrase,
 in a fix,C2,,phrase,
 in a flash,C2,,phrase,
@@ -4059,10 +4032,12 @@ in contrast,B2,,phrase,
 in demand,C2,,phrase,
 in depth,B2,,phrase,
 in detail,B1,,phrase,
+in direction,B2,,phrase,
 in doubt,B2,,phrase,
 in due course,B2,,phrase,
 in effect,C2,,phrase,
 in essence,C2,,phrase,
+in eye,B2,,phrase,
 in fact,B1,,phrase,communication
 in favor of,B2,,phrase,people: personality
 in first,B1,,phrase,shopping
@@ -4073,8 +4048,9 @@ in full,B1,,phrase,
 in general,B1,,phrase,communication
 in good,B2,,phrase,"body and health, describing things"
 in good taste,C2,,phrase,
-in hand,C2,,phrase,
+in hand,C1,,phrase,
 in honor of,B2,,phrase,people: personality
+in interest,C1,,phrase,
 in isolation,C2,,phrase,
 in its,C2,,phrase,
 in its infancy,C2,,phrase,
@@ -4172,12 +4148,13 @@ in turn,C1,,phrase,
 in two,B2,,phrase,describing things
 in vain,C1,,phrase,
 in view of,B2,,phrase,
+in word,C2,,phrase,
 in writing,B2,,phrase,communication
 in your eighty,B2,,phrase,people: appearance
 in your fifty,B2,,phrase,people: appearance
 in your forty,B2,,phrase,people: appearance
 in your heart,C1,,phrase,
-in your mind 's eye,C2,,phrase,
+in your mind eye,C2,,phrase,
 in your ninety,B2,,phrase,people: appearance
 in your seventy,B2,,phrase,people: appearance
 in your sixty,B2,,phrase,people: appearance
@@ -4398,7 +4375,7 @@ intruder,C2,NOT WANTED,noun,
 intrusion,C2,,noun,
 intuition,C2,,noun,
 invade,B2,WAR,verb,people: actions
-invade 's privacy,C2,,phrase,
+invade privacy,C2,,phrase,
 invaluable,C1,,adjective,
 invariably,C2,,adverb,
 invasion,B2,WAR,noun,people: actions
@@ -4436,19 +4413,18 @@ isolate,C1,FAR AWAY,adjective,
 isolation,C1,SEPARATE,noun,
 issue,B1,SUBJECT,noun,communication
 it,A1,THING,pronoun,
+it a good thing,B2,,phrase,communication
 it appear,B2,,phrase,
-it be,B2,,phrase,
-it be a good thing,B2,,phrase,communication
-it be just as well,C1,,phrase,communication
-it be only a matter of time,C1,,phrase,
 it be rain,A1,,phrase,natural world
-it be time,B1,,phrase,
 it follow that,C2,,phrase,
 it go without say,B2,,phrase,communication
+it just as well,C1,,phrase,communication
 it look like,B1,,phrase,
+it only a matter of time,C1,,phrase,
 it rain,A1,,phrase,natural world
 it seem,B2,,phrase,
 it stand to reason,C2,,phrase,
+it time,B1,,phrase,
 it would appear,C1,,phrase,
 itch,B2,SKIN,verb,body and health
 itch to do,C2,,phrase,
@@ -4739,17 +4715,16 @@ leopard,B2,,noun,animals
 less,A2,,adverb,describing things
 lessen,C1,,verb,
 lesson,A1,TEACHING PERIOD,noun,education
-let,B1,ALLOW,verb,
+let,A2,,phrase,communication
 let I,B2,,phrase,
 let alone,C1,,phrase,
 let down or let down,B2,,phrasal verb,people: personality
+let face it,C2,,phrase,
 let go,C2,,phrase,
 let know,A2,,phrase,communication
 let off or let off,B2,,phrasal verb,crime
 let off steam,C2,IDIOM,phrase,
 let out,B2,,phrasal verb,people: actions
-let us,A2,,phrase,communication
-let us face it,C2,,phrase,
 let your guard down,C2,IDIOM,phrase,
 let your hair down,C2,IDIOM,phrase,
 lethal,C2,,adjective,
@@ -4961,7 +4936,6 @@ major,B2,,adjective,
 major in,B2,,phrasal verb,
 majority,B2,,noun,describing things
 make,A1,PRODUCE,verb,people: actions
-make 's day,C2,IDIOM,phrase,
 make a difference,B2,,phrase,
 make a face,B1,,phrase,"communication, people: actions"
 make a fool of,B2,,phrase,people: personality
@@ -4972,6 +4946,7 @@ make a point of do,C1,,phrase,
 make a run for it,C2,,phrase,
 make a splash,C2,IDIOM,phrase,
 make allowance for,C2,,phrase,
+make day,C2,IDIOM,phrase,
 make do,B1,,phrase,people: actions
 make end meet,C1,IDIOM,phrase,money
 make for,B2,,phrasal verb,people: actions
@@ -5047,7 +5022,6 @@ mass media,B2,,phrase,
 massacre,C2,,noun,crime
 massive,B2,,adjective,describing things
 master,B2,IN CHARGE,noun,
-master 's,C1,,phrase,education
 masterpiece,C2,,noun,arts and media
 mat,C1,,noun,
 match,A2,COMPETITION,noun,shopping
@@ -5433,7 +5407,7 @@ nominate,C1,,verb,
 nomination,C1,,noun,
 non - smoking,B2,,adjective,body and health
 none,B1,,pronoun,describing things
-none of 's business,B2,,phrase,communication
+none of business,B2,,phrase,communication
 none the happy,C2,,phrase,
 none too clean,C2,,phrase,
 nonetheless,C1,,adverb,
@@ -5619,7 +5593,7 @@ on account of,B2,,phrase,
 on an angle,C1,,phrase,
 on average,B2,,phrase,describing things
 on balance,B2,,phrase,communication
-on behalf of or on 's behalf,B2,,phrase,
+on behalf of or on behalf,B2,,phrase,
 on board,B1,,phrase,travel
 on camera,B2,,phrase,arts and media
 on cloud nine,C2,IDIOM,phrase,
@@ -5656,7 +5630,7 @@ on the increase,C1,,phrase,
 on the job,C1,IDIOM,phrase,
 on the line,C2,IDIOM,phrase,work
 on the one hand . . . on the other hand,B2,,phrase,communication
-on the part of on 's part,C2,,phrase,
+on the part of on part,C2,,phrase,
 on the point of do,B2,,phrase,
 on the road,C1,,phrase,travel
 on the same wavelength,C2,IDIOM,phrase,
@@ -6893,6 +6867,7 @@ ripe,B2,"FRUIT, ETC.",adjective,"food and drink, natural world"
 ripe for,C2,,phrase,
 rise,B1,SUN/MOON,verb,natural world
 rise to,C2,,phrase,
+rise to fame,C2,,phrase,
 rise to your foot,C2,,phrase,
 risk,B2,BAD POSSIBILITY,noun,
 risky,B2,,adjective,people: personality
@@ -6998,6 +6973,7 @@ safety,B2,BEING SAFE,noun,
 sail,A2,,noun,shopping
 sailor,B1,,noun,"shopping, travel, work"
 saint,C1,,noun,
+sake,B2,,phrase,
 salad,A2,,noun,food and drink
 salary,B1,,noun,"money, work"
 sale,B2,SELL,noun,shopping
@@ -7196,7 +7172,6 @@ server,B1,,noun,technology
 service,B1,PUBLIC NEED,noun,
 session,B1,,noun,
 set,A2,GROUP,noun,
-set 's mind at ease,C1,,phrase,
 set a date,B1,,phrase,people: actions
 set a record,B2,,phrase,"people: actions, shopping"
 set an example,B2,,phrase,people: actions
@@ -7206,6 +7181,7 @@ set down,C2,,phrase,people: actions
 set fire to set on fire,C2,,phrase,
 set foot in,C1,,phrase,
 set guideline,C2,,phrase,
+set mind at ease,C1,,phrase,
 set off,B1,,phrasal verb,travel
 set off or set off,C2,,phrasal verb,
 set out,B1,TRIP,phrasal verb,travel
@@ -7831,6 +7807,7 @@ strong,A2,PHYSICALLY POWERFUL,adjective,people: appearance
 strong language,C1,,phrase,communication
 strong nerve,B2,,phrase,people: personality
 strong opposition,C2,,phrase,
+strong point,C1,,phrase,people: personality
 strongly,B2,,adverb,communication
 structural,C2,,adjective,
 structure,B2,WAY PARTS ARE ARRANGED,noun,buildings
@@ -8025,8 +8002,6 @@ tactless,C2,,adjective,people: personality
 tail,B2,ANIMAL,noun,animals
 tailpipe,C1,,noun,
 take,A1,CARRY,verb,people: actions
-take 's place,B2,,phrase,people: actions
-take 's word for it,B2,,phrase,communication
 take a break,B1,,phrase,
 take a deep breath,B2,,phrase,"body and health, people: actions"
 take a dim view of,C2,IDIOM,phrase,
@@ -8081,6 +8056,7 @@ take to,C1,,phrasal verb,people: personality
 take to heart,C2,IDIOM,phrase,
 take turn,B2,,phrase,people: actions
 take up or take up,B1,START,phrasal verb,people: actions
+take word for it,B2,,phrase,communication
 take your breath away,B2,,phrase,people: personality
 take your eye off,B2,IDIOM,phrase,
 take your time,C1,,phrase,
@@ -8195,12 +8171,12 @@ thank you,A1,GRATEFUL,exclamation,communication
 thankful,C1,,adjective,
 thankfully,C1,,adverb,
 that,A1,ALREADY MENTIONED,determiner,
+that all right,A2,,phrase,communication
 that be,C1,,phrase,
-that be all right,A2,,phrase,communication
-that be that,C1,,phrase,
 that depend,B1,,phrase,
 that kind of thing,B1,,phrase,
 that sort of thing,B1,,phrase,
+that that,C1,,phrase,
 the,A1,ONLY ONE,determiner,
 the air,B2,,phrase,
 the animal,C2,,phrase,natural world
@@ -8217,7 +8193,7 @@ the bush,C2,,phrase,
 the case,B2,,phrase,
 the center of attention,C2,,phrase,
 the chart,B2,,phrase,arts and media
-the cleaner 's,C1,,phrase,
+the cleaner,C1,,phrase,
 the cold,B1,,phrase,natural world
 the country,A2,,phrase,natural world
 the crack of dawn,C2,,phrase,
@@ -8392,9 +8368,9 @@ therapist,C1,,noun,buildings
 therapy,B2,,noun,body and health
 there,A1,,phrase,travel
 there be,A1,,phrase,
-there be no doubt,B1,,phrase,
-there be no harm in do,C1,,phrase,
 there need to,C2,,phrase,
+there no doubt,B1,,phrase,
+there no harm in do,C1,,phrase,
 thereafter,C2,,adverb,
 thereby,C1,,adverb,
 therefore,B1,,adverb,communication
@@ -8514,17 +8490,16 @@ tiring,B1,,adjective,people: personality
 tissue,B1,,noun,
 title,B1,"BOOK/FILM, ETC.",noun,communication
 to,A1,INFINITIVE,preposition,
-to 's credit,C2,,phrase,
-to 's disappointment,C2,,phrase,
-to 's satisfaction,C2,,phrase,
 to a certain extent,B2,,phrase,communication
 to a great,B2,,phrase,communication
 to all intent and purpose,C2,,phrase,
 to begin with,B1,,phrase,
 to blame,C1,,phrase,
 to cap it off,C1,,phrase,
+to credit,C2,,phrase,
 to date,B2,,phrase,
 to death,C2,,phrase,
+to disappointment,C2,,phrase,
 to do,A1,,phrase,people: personality
 to do so,C1,,phrase,
 to go,B1,,phrase,food and drink
@@ -8535,6 +8510,7 @@ to my knowledge,B2,,phrase,communication
 to my mind,B2,,phrase,communication
 to myself,C1,,phrase,
 to precise,B2,,phrase,
+to satisfaction,C2,,phrase,
 to say nothing of,C2,,phrase,
 to say the least,C1,,phrase,communication
 to some extent,B2,,phrase,communication
@@ -9112,11 +9088,12 @@ wastebasket,A2,,noun,
 watch,A1,LOOK AT,verb,people: actions
 watch out,B2,,phrasal verb,communication
 water,A1,LIQUID,noun,natural world
-water off a duck 's back,C2,IDIOM,phrase,
+water off a duck back,C2,IDIOM,phrase,
 waterfall,B1,,noun,natural world
 waterproof,B2,,adjective,
 wave,B1,,verb,"communication, people: actions"
 way,A2,METHOD,noun,
+way of life,B1,,phrase,
 we,A1,,pronoun,
 we appreciate,B2,,phrase,communication
 we understand,C1,,phrase,communication
@@ -9180,10 +9157,10 @@ what,A1,QUESTION,pronoun,
 what about,A2,SUGGESTION,phrase,communication
 what be,A2,,phrase,communication
 what be more,B2,,phrase,communication
-what be up,B1,,phrase,
 what do do,A1,,phrase,work
 what if,B1,,phrase,communication
 what strike I or the thing that strike I,B2,,phrase,
+what up,B1,,phrase,
 what with,C2,,phrase,
 whatever,B1,ANYTHING,pronoun,
 whatever you please,C2,,phrase,
@@ -9200,7 +9177,7 @@ whenever possible,B2,,phrase,
 where,A1,,adverb,
 where stand,C2,,phrase,
 where you stand,C2,,phrase,
-whereabouts,C2,,adverb,
+whereabouts,C2,,phrase,
 whereas,B2,,conjunction,communication
 whereby,C2,,adverb,
 wherever,B1,EVERY PLACE,conjunction,
@@ -9382,9 +9359,9 @@ yard,A2,AREA,noun,buildings
 yawn,B2,,verb,people: actions
 yeah,A2,,exclamation,communication
 year,A1,,phrase,
-year 's junior,C2,,phrase,
 year after year,B1,,phrase,
 year before last,B2,,phrase,
+year junior,C2,,phrase,
 year old,A1,,phrase,people: appearance
 yearn for yearn to do,C2,,phrase,
 yell,B2,,noun,communication

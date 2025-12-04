@@ -88,6 +88,7 @@ class UnknownTokenFinder:
             spacy.require_cpu()
 
         self.stopwords['en'] = set(nltk.corpus.stopwords.words("english"))
+        self.stopwords['en'].add("'s")
         self.nlp['en'] = spacy.load("en_core_web_trf", exclude=["ner"])
         with open("data/stopwords/ja.txt", encoding='utf-8') as f: # https://www.ranks.nl/stopwords/
             self.stopwords['ja'] = set([line.strip() for line in f if line.strip()])
