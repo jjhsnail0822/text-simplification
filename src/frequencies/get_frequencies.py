@@ -90,7 +90,7 @@ def get_unknown_tokens():
                 update_checkpoint(output_path,unknown_tokens)
 
     with open(output_path,'w') as f:
-        json.dump(unknown_token_frequencies,f)
+        json.dump(unknown_tokens,f)
     print(f"finished  get unknown tokens")
 
 def get_unknown_token_frequencies():
