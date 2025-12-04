@@ -72,13 +72,21 @@ class RewardFunctionContainer:
         model, tok, device, dtype = self.get_evaluator_hf_gpu()
         results = []
         for messages in messages_batch:
-            text = tok.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True,
-                padding=False,
-                enable_thinking=False,
-            )
+            if 'qwen3' in evaluator_model_id.lower():
+                text = tok.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                    padding=False,
+                    enable_thinking=False,
+                )
+            else:
+                text = tok.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                    padding=False,
+                )
             enc = tok(
                 text,
                 return_tensors="pt",
