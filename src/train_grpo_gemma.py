@@ -7,8 +7,18 @@ from bert_score import BERTScorer
 import torch
 from level_assessment import LevelAssessor
 import re
+import random
+import numpy as np
 
-torch.manual_seed(42)
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+set_seed(42)
 os.environ.setdefault("WANDB_PROJECT", "text-simplification")
 
 MAX_PROMPT_LENGTH = 512
@@ -460,7 +470,7 @@ def main():
         # vllm_tensor_parallel_size=4,
         dataloader_num_workers=4,
         dataloader_pin_memory=True,
-        ddp_find_unused_parameters=False, # DDP: avoid extra autograd traversal
+        ddp_find_unused_parameters=False if 'qwen3' in MODEL_ID.lower() else True,
         report_to="wandb",
         log_on_each_node=False,
         logging_strategy="steps",
@@ -472,6 +482,7 @@ def main():
         beta = 0.001,
         reward_weights=[2.0, 1.0, 1.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
+        seed=42,
     )
 
     # Trainer
