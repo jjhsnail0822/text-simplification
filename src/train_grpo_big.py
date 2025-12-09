@@ -107,6 +107,9 @@ class RewardFunctionContainer:
                     messages=messages,
                     max_tokens=1,
                     temperature=0.0,
+                    extra_body={
+                        "chat_template_kwargs": {"enable_thinking": False},
+                    } if 'qwen3' in evaluator_model_id.lower() else None,
                 )
                 results.append(resp.choices[0].message.content.strip())
             return results
