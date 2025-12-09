@@ -9,6 +9,7 @@ from level_assessment import LevelAssessor
 import re
 import random
 import numpy as np
+from openai import OpenAI
 
 def set_seed(seed):
     random.seed(seed)
@@ -24,7 +25,17 @@ os.environ.setdefault("WANDB_PROJECT", "text-simplification")
 MAX_PROMPT_LENGTH = 512
 MAX_COMPLETION_LENGTH = 512
 
-MODEL_ID = "Qwen/Qwen3-4B-Instruct-2507"
+MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen3-4B-Instruct-2507")
+
+AUX_GPU_ID = int(os.environ.get("AUX_GPU_ID", "0"))
+if torch.cuda.is_available() and AUX_GPU_ID >= 0:
+    AUX_DEVICE = torch.device(f"cuda:{AUX_GPU_ID}")
+else:
+    AUX_DEVICE = torch.device("cpu")
+
+evaluator_model_id = os.environ.get("EVALUATOR_MODEL_ID", "Qwen/Qwen3-4B-Instruct-2507")
+
+save_dir = os.environ.get("OUTPUT_DIR", "results/grpo/Qwen3-4B-Instruct-2507-GRPO")
 
 # Global placeholders (will be initialized in main)
 tokenizer = None
@@ -33,7 +44,6 @@ level_assessor = None
 spacy_nlp = None
 
 # Lazy init for evaluator vLLM (created on first reward call per process)
-evaluator_model_id = "Qwen/Qwen3-4B-Instruct-2507"
 _evaluator_hf_model = None
 _evaluator_hf_tokenizer = None
 _evaluator_device = None
@@ -53,32 +63,55 @@ LANG_TO_LANGUAGE = {
     "zh": "Chinese",
 }
 
+EVAL_VLLM_ENDPOINT = os.environ.get("EVAL_VLLM_ENDPOINT", "http://localhost:8008/v1")
+USE_EVAL_VLLM = os.environ.get("USE_EVAL_VLLM", "0") == "1"
+_vllm_client = None
+
 class RewardFunctionContainer:
     def __init__(self):
-        pass
-        
+        self._aux_device = AUX_DEVICE
+
     def _get_local_device(self):
-        if torch.cuda.is_available():
-            local_rank = int(os.environ.get("LOCAL_RANK", "0"))
-            torch.cuda.set_device(local_rank)
-            return torch.device(f"cuda:{local_rank}")
-        return torch.device("cpu")
+        return self._aux_device
+
+    def _get_vllm_client(self):
+        global _vllm_client
+        if _vllm_client is None:
+            _vllm_client = OpenAI(base_url=EVAL_VLLM_ENDPOINT, api_key="EMPTY")
+        return _vllm_client
 
     def get_evaluator_hf_gpu(self):
         global _evaluator_hf_model, _evaluator_hf_tokenizer, _evaluator_device, _evaluator_dtype
         if _evaluator_hf_model is None:
             _evaluator_device = self._get_local_device()
-            # Prefer bf16 if available, otherwise fp16
-            _evaluator_dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float16
+            if _evaluator_device.type == "cuda":
+                supports_bf16 = torch.cuda.is_bf16_supported()
+                _evaluator_dtype = torch.bfloat16 if supports_bf16 else torch.float16
+            else:
+                _evaluator_dtype = torch.float32
             _evaluator_hf_tokenizer = AutoTokenizer.from_pretrained(evaluator_model_id)
             _evaluator_hf_model = AutoModelForCausalLM.from_pretrained(
                 evaluator_model_id,
-                dtype=_evaluator_dtype,
+                torch_dtype=_evaluator_dtype,
             ).to(_evaluator_device)
             _evaluator_hf_model.eval()
         return _evaluator_hf_model, _evaluator_hf_tokenizer, _evaluator_device, _evaluator_dtype
 
     def _hf_chat_batch(self, messages_batch):
+        if USE_EVAL_VLLM:
+            client = self._get_vllm_client()
+            results = []
+            for messages in messages_batch:
+                resp = client.chat.completions.create(
+                    model="evaluator",
+                    messages=messages,
+                    max_tokens=1,
+                    temperature=0.0,
+                )
+                results.append(resp.choices[0].message.content.strip())
+            return results
+
+        # HF fallback
         model, tok, device, dtype = self.get_evaluator_hf_gpu()
         results = []
         for messages in messages_batch:
@@ -455,7 +488,7 @@ def main():
 
     # Training configuration
     training_args = GRPOConfig(
-        output_dir="results/grpo/Qwen3-4B-Instruct-2507-GRPO-new",
+        output_dir=save_dir,
         use_vllm=True,
         vllm_mode="colocate",
         max_prompt_length=MAX_PROMPT_LENGTH,
@@ -464,10 +497,10 @@ def main():
         optim="adamw_8bit",
         gradient_checkpointing_kwargs={"use_reentrant": False},
         num_generations=8,
-        per_device_train_batch_size=2,
-        gradient_accumulation_steps=8,
+        per_device_train_batch_size=16,
+        gradient_accumulation_steps=1,
         # vllm_gpu_memory_utilization=0.2,
-        # vllm_tensor_parallel_size=4,
+        # vllm_tensor_parallel_size=2,
         dataloader_num_workers=4,
         dataloader_pin_memory=True,
         ddp_find_unused_parameters=False if 'qwen3' in MODEL_ID.lower() else True,
@@ -479,8 +512,8 @@ def main():
         # weights for [vocab_level, unique_words, bertscore, entailment, length_ratio, distinct_n, text_coherence]
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
         # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-        beta = 0.0001,
-        reward_weights=[1.0, 1.0, 1.0],
+        beta = 0.001,
+        reward_weights=[2.0, 1.0, 1.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
         seed=42,
     )
