@@ -9,7 +9,8 @@ from level_assessment import LevelAssessor
 import re
 import random
 import numpy as np
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
+import asyncio
 
 def set_seed(seed):
     random.seed(seed)
@@ -70,7 +71,7 @@ _vllm_client = None
 class RewardFunctionContainer:
     def __init__(self):
         self._aux_device = AUX_DEVICE
-
+        
     def _get_local_device(self):
         return self._aux_device
 
@@ -97,22 +98,27 @@ class RewardFunctionContainer:
             _evaluator_hf_model.eval()
         return _evaluator_hf_model, _evaluator_hf_tokenizer, _evaluator_device, _evaluator_dtype
 
+    async def _process_batch_async(self, messages_batch):
+        async with AsyncOpenAI(base_url=EVAL_VLLM_ENDPOINT, api_key="EMPTY") as client:
+            tasks = []
+            for messages in messages_batch:
+                tasks.append(
+                    client.chat.completions.create(
+                        model="evaluator",
+                        messages=messages,
+                        max_tokens=1,
+                        temperature=0.0,
+                        extra_body={
+                            "chat_template_kwargs": {"enable_thinking": False},
+                        } if 'qwen3' in evaluator_model_id.lower() else None,
+                    )
+                )
+            responses = await asyncio.gather(*tasks)
+        return [r.choices[0].message.content.strip() for r in responses]
+
     def _hf_chat_batch(self, messages_batch):
         if USE_EVAL_VLLM:
-            client = self._get_vllm_client()
-            results = []
-            for messages in messages_batch:
-                resp = client.chat.completions.create(
-                    model="evaluator",
-                    messages=messages,
-                    max_tokens=1,
-                    temperature=0.0,
-                    extra_body={
-                        "chat_template_kwargs": {"enable_thinking": False},
-                    } if 'qwen3' in evaluator_model_id.lower() else None,
-                )
-                results.append(resp.choices[0].message.content.strip())
-            return results
+            return asyncio.run(self._process_batch_async(messages_batch))
 
         # HF fallback
         model, tok, device, dtype = self.get_evaluator_hf_gpu()
@@ -202,32 +208,24 @@ class RewardFunctionContainer:
             "Answer with a single number (0-10) only, and say nothing else.\n\n"
             "[TEXT]\n{text}"
         )
-        # prompt = (
-        #     "Rate the coherence of the given {language} text on a scale from 0 to 10. "
-        #     "Answer with a single number (0-10) only, and say nothing else.\n\n"
-        #     "[TEXT]\n{text}"
-        # )
-        # prompt = (
-        #     "Decide if the given {language} text makes sense in terms of coherence. "
-        #     "Answer with a single word: True or False.\n\n"
-        #     "[TEXT]\n{text}"
-        # )
         completion_contents = [completion[0]["content"] for completion in completions]
         langs = kwargs['language']
-        rewards = []
-
+        
+        all_messages = []
         for i, comp in enumerate(completion_contents):
             language = LANG_TO_LANGUAGE[langs[i]]
             prompt_filled = prompt.format(language=language, text=comp)
-            batched_messages = [[{"role": "user", "content": prompt_filled}]]
-            texts = self._hf_chat_batch(batched_messages)
-            t = texts[0].strip().lower()
-            # reward = 1.0 if "true" in t and "false" not in t else 0.0
-            # convert to score out of 10
+            all_messages.append([{"role": "user", "content": prompt_filled}])
+
+        all_texts = self._hf_chat_batch(all_messages)
+    
+        rewards = []
+        for t in all_texts:
+            t = t.strip().lower()
             score = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
             score = max(0, min(10, score))
-            reward = score / 10.0
-            rewards.append(reward)
+            rewards.append(score / 10.0)
+    
         return rewards
 
     def reward_language_purity(self, completions, **kwargs):
@@ -295,44 +293,47 @@ class RewardFunctionContainer:
         completion_contents = [completion[0]["content"] for completion in completions]
         references = self.prompts_to_references(kwargs['prompts'])
         langs = kwargs['language']
-        rewards = []
 
+        all_messages = []
+        sample_indices = [] # list of (sample_index, num_sentence_pairs)
+        
         for i, (comp, ref) in enumerate(zip(completion_contents, references)):
             sentences_comp = self.split_sentence(comp, langs[i])
             sentences_ref = self.split_sentence(ref, langs[i])
-            # n_pairs = min(len(sentences_comp), len(sentences_ref)) # use the minimum number of sentence pairs
-            # if n_pairs == 0:
-            #     rewards.append(0.0)
-            #     continue
-            # sentences_comp = sentences_comp[:n_pairs]
-            # sentences_ref = sentences_ref[:n_pairs]
-
+            
             if len(sentences_comp) != len(sentences_ref):
-                # Skip entailment reward if number of sentences do not match
+                sample_indices.append((i, 0))  # skip marker
+                continue
+            
+            num_pairs = len(sentences_ref)
+            sample_indices.append((i, num_pairs))
+            
+            for sent_a, sent_b in zip(sentences_ref, sentences_comp):
+                all_messages.append([{"role": "user", "content": prompt.format(sentence_a=sent_a, sentence_b=sent_b)}])
+                all_messages.append([{"role": "user", "content": prompt.format(sentence_a=sent_b, sentence_b=sent_a)}])
+
+        all_texts = self._hf_chat_batch(all_messages) if all_messages else []
+
+        rewards = []
+        text_idx = 0
+        for i, (sample_idx, num_pairs) in enumerate(sample_indices):
+            if num_pairs == 0:
                 rewards.append(0.0)
                 continue
-
+            
             entailment_scores = []
-            batched_messages = []
-            for sent_a, sent_b in zip(sentences_ref, sentences_comp):
-                prompt_1 = prompt.format(sentence_a=sent_a, sentence_b=sent_b)
-                batched_messages.append([{"role": "user", "content": prompt_1}])
-                # reverse direction
-                prompt_2 = prompt.format(sentence_a=sent_b, sentence_b=sent_a)
-                batched_messages.append([{"role": "user", "content": prompt_2}])
-
-            texts = self._hf_chat_batch(batched_messages)
-            # Robust parse: any 'true' token wins, otherwise false.
-            for text in texts:
-                t = text.strip().lower()
+            for _ in range(num_pairs * 2):
+                t = all_texts[text_idx].strip().lower()
                 entailment_scores.append(1.0 if "true" in t and "false" not in t else 0.0)
-            # Symmetric aggregation: 1.0 if both directions are True, 0.5 if one, 0 if none
-            reward = 0.0
-            for j in range(0, len(entailment_scores), 2):
-                a_to_b, b_to_a = entailment_scores[j], entailment_scores[j+1]
-                reward += 1.0 if (a_to_b == 1.0 and b_to_a == 1.0) else (0.5 if (a_to_b + b_to_a == 1.0) else 0.0)
-            reward /= (len(entailment_scores) // 2)
+                text_idx += 1
+            
+            reward = sum(
+                1.0 if (entailment_scores[j] == 1.0 and entailment_scores[j+1] == 1.0) 
+                else (0.5 if (entailment_scores[j] + entailment_scores[j+1] == 1.0) else 0.0)
+                for j in range(0, len(entailment_scores), 2)
+            ) / num_pairs
             rewards.append(reward)
+        
         return rewards
 
     def prompts_to_references(self, prompts):
