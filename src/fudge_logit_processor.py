@@ -18,8 +18,7 @@ class LevelWeighter:
         rewards = self.assessor.reward_vocab_level(texts,len(texts) * [level] ,len(texts)*[lang])
         return torch.Tensor(rewards)
     def __call__(self, generated_input_ids: torch.LongTensor, scores: torch.FloatTensor,lang,level,topk,wait=-1) -> torch.FloatTensor:        
-        if generated_input_ids.shape[-1] < wait:
-            return scores
+        generated_input_ids = generated_input_ids[:,-wait:]
         top_scores, top_score_indices = torch.topk(scores, topk, dim=1)
         
         # Create candidate sequences

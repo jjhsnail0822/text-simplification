@@ -1,12 +1,13 @@
 from vllm import LLM, SamplingParams
 from transformers import AutoTokenizer
-
+from level_assessment import LevelAssessor
 
 def main():
+    return
     model_id = "Qwen/Qwen3-4B-Instruct-2507"
     #model_id = "results/grpo/Qwen3-4B-Instruct-2507-GRPO-coherence-smaller-beta/checkpoint-9000-merged"
-
-    sampling_params = SamplingParams(max_tokens=1024,extra_args={'lang':'ko','level':'TOPIK Level 2','fudge_topk':100,'wait':-1})
+    
+    sampling_params = SamplingParams(max_tokens=1024,extra_args={'lang':'ko','level':'TOPIK Level 2','fudge_topk':100,'wait':20})
     llm = LLM(model_id, max_model_len=1024,logits_processors=['fudge_logit_processor:FudgeProcessor'])
     PROMPT = "You are a careful rewrite assistant.\nRewrite the <TEXT> in {lang} so that every word, except proper nouns or proper adjectives, is at or below the {level} vocabulary level.\nReplace or simplify any other words above {level} level with easier alternatives while preserving the original meaning and coherence.\nDo not skip, shorten, or omit any part of the text. Keep sentence count and structure.\nOutput only the fully converted text with no explanations, instructions, or extra words.\n\n<TEXT>\n{shortened_text}"
     lang = "Korean"
@@ -30,6 +31,7 @@ def main():
     outputs = llm.generate(text, sampling_params)
     print(outputs)
     print(outputs[0].outputs[0].text)
+    print(assessor.reward_vocab_level([outputs[0].outputs[0].text], ['TOPIK Level 2'] ,['ko']))
 
 if __name__ == "__main__":
     main()
