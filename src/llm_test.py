@@ -1,6 +1,6 @@
 from vllm import LLM, SamplingParams
 from transformers import AutoTokenizer
-
+from level_assessment import LevelAssessor
 
 def main():
     # model_id = "Qwen/Qwen3-4B-Instruct-2507"
@@ -23,12 +23,14 @@ def main():
         messages,
         tokenize=False,
         add_generation_prompt=True,
-        enable_thinking=False  # Setting enable_thinking=False disables thinking mode
+        enable_thinking=False # Setting enable_thinking=False disables thinking mode
+
     )
 
     outputs = llm.generate(text, sampling_params)
     print(outputs)
     print(outputs[0].outputs[0].text)
+    # print(assessor.reward_vocab_level([outputs[0].outputs[0].text], ['TOPIK Level 2'] ,['ko']))
 
 if __name__ == "__main__":
     main()
