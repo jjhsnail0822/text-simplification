@@ -106,7 +106,7 @@ class RewardFunctionContainer:
                     client.chat.completions.create(
                         model="evaluator",
                         messages=messages,
-                        max_tokens=1,
+                        max_tokens=2,
                         temperature=0.0,
                         extra_body={
                             "chat_template_kwargs": {"enable_thinking": False},
@@ -149,7 +149,7 @@ class RewardFunctionContainer:
             with torch.no_grad():
                 gen = model.generate(
                     **enc,
-                    max_new_tokens=1,
+                    max_new_tokens=2,
                     do_sample=False,
                     pad_token_id=tok.eos_token_id,
                 )
@@ -225,6 +225,12 @@ class RewardFunctionContainer:
             score = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
             score = max(0, min(10, score))
             rewards.append(score / 10.0)
+
+        # # print result text and rewards for debugging
+        # for i, t in enumerate(all_texts):
+        #     print("Completion:", completion_contents[i])
+        #     print("Evaluator response:", t)
+        #     print("Coherence reward:", rewards[i])
     
         return rewards
 
@@ -285,55 +291,133 @@ class RewardFunctionContainer:
 
     def reward_entailment(self, completions, **kwargs):
         prompt = (
-            "Decide if Sentence A entails Sentence B. "
+            "Decide if Text A entails Text B. "
             "If B must be true given A, answer True. Otherwise, answer False. "
             "Answer with a single word: True or False.\n\n"
-            "[Sentence A]\n{sentence_a}\n\n[Sentence B]\n{sentence_b}"
+            "[Text A]\n{sentence_a}\n\n[Text B]\n{sentence_b}"
         )
+
+        def _is_true(txt: str) -> bool:
+            t = (txt or "").strip().lower()
+            return ("true" in t) and ("false" not in t)
+
         completion_contents = [completion[0]["content"] for completion in completions]
-        references = self.prompts_to_references(kwargs['prompts'])
-        langs = kwargs['language']
-
-        all_messages = []
-        sample_indices = [] # list of (sample_index, num_sentence_pairs)
-        
-        for i, (comp, ref) in enumerate(zip(completion_contents, references)):
-            sentences_comp = self.split_sentence(comp, langs[i])
-            sentences_ref = self.split_sentence(ref, langs[i])
-            
-            if len(sentences_comp) != len(sentences_ref):
-                sample_indices.append((i, 0))  # skip marker
-                continue
-            
-            num_pairs = len(sentences_ref)
-            sample_indices.append((i, num_pairs))
-            
-            for sent_a, sent_b in zip(sentences_ref, sentences_comp):
-                all_messages.append([{"role": "user", "content": prompt.format(sentence_a=sent_a, sentence_b=sent_b)}])
-                all_messages.append([{"role": "user", "content": prompt.format(sentence_a=sent_b, sentence_b=sent_a)}])
-
-        all_texts = self._hf_chat_batch(all_messages) if all_messages else []
+        references = self.prompts_to_references(kwargs["prompts"])
+        langs = kwargs["language"]
 
         rewards = []
-        text_idx = 0
-        for i, (sample_idx, num_pairs) in enumerate(sample_indices):
-            if num_pairs == 0:
+        for comp, ref, lang in zip(completion_contents, references, langs):
+            sentences_comp = self.split_sentence(comp, lang)
+            sentences_ref = self.split_sentence(ref, lang)
+
+            if len(sentences_comp) < len(sentences_ref) or len(sentences_ref) == 0:
                 rewards.append(0.0)
                 continue
-            
-            entailment_scores = []
-            for _ in range(num_pairs * 2):
-                t = all_texts[text_idx].strip().lower()
-                entailment_scores.append(1.0 if "true" in t and "false" not in t else 0.0)
-                text_idx += 1
-            
-            reward = sum(
-                1.0 if (entailment_scores[j] == 1.0 and entailment_scores[j+1] == 1.0) 
-                else (0.5 if (entailment_scores[j] + entailment_scores[j+1] == 1.0) else 0.0)
-                for j in range(0, len(entailment_scores), 2)
-            ) / num_pairs
-            rewards.append(reward)
-        
+
+            comp_idx = 0
+
+            # Store chosen spans first; compute ref->span entailment in a single batch later.
+            chosen_pairs = []  # list of (ref_sent, chosen_span, comp_entails_bool)
+
+            for ref_i, ref_sent in enumerate(sentences_ref):
+                # If this is the last reference sentence, absorb all remaining completion sentences.
+                if ref_i == len(sentences_ref) - 1:
+                    span_text = " ".join(sentences_comp[comp_idx:]).strip()
+                    if not span_text:
+                        chosen_pairs.append((ref_sent, "", False))
+                        comp_idx = len(sentences_comp)
+                        continue
+
+                    # Span decision uses comp_entails only (span -> ref).
+                    msg = [[{"role": "user", "content": prompt.format(sentence_a=span_text, sentence_b=ref_sent)}]]
+                    out = self._hf_chat_batch(msg)
+                    comp_entails = _is_true(out[0]) if out else False
+
+                    chosen_pairs.append((ref_sent, span_text, comp_entails))
+                    comp_idx = len(sentences_comp)
+                    continue
+
+                start = comp_idx
+                remaining_refs_after = len(sentences_ref) - (ref_i + 1)
+                max_end = len(sentences_comp) - remaining_refs_after - 1  # inclusive
+
+                # Cap the span expansion to at most 10 sentences.
+                max_end = min(max_end, start + 10 - 1)
+
+                # If no candidates are available under constraints, fall back to using 1 completion sentence.
+                if start > max_end:
+                    if start >= len(sentences_comp):
+                        chosen_pairs.append((ref_sent, "", False))
+                        continue
+                    chosen_span = sentences_comp[start].strip()
+                    # Span decision uses comp_entails only (span -> ref).
+                    msg = [[{"role": "user", "content": prompt.format(sentence_a=chosen_span, sentence_b=ref_sent)}]]
+                    out = self._hf_chat_batch(msg)
+                    comp_entails = _is_true(out[0]) if out else False
+
+                    chosen_pairs.append((ref_sent, chosen_span, comp_entails))
+                    comp_idx = start + 1
+                    continue
+
+                candidates = [" ".join(sentences_comp[start : end + 1]).strip() for end in range(start, max_end + 1)]
+
+                # Only request comp_entails for span selection (candidate -> reference).
+                comp_messages = [
+                    [{"role": "user", "content": prompt.format(sentence_a=cand, sentence_b=ref_sent)}]
+                    for cand in candidates
+                ]
+                comp_outs = self._hf_chat_batch(comp_messages) if comp_messages else []
+                comp_entails_list = [_is_true(x) for x in comp_outs]
+
+                # Greedy expansion rule:
+                # keep adding completion sentences until (completion_span entails reference) becomes True.
+                chosen_offset = None
+                for offset, ce in enumerate(comp_entails_list):
+                    if ce:
+                        chosen_offset = offset
+                        break
+
+                # If we never find an entailing span, use only 1 completion sentence.
+                if chosen_offset is None:
+                    chosen_offset = 0
+
+                chosen_span = candidates[chosen_offset]
+                chosen_comp_entails = comp_entails_list[chosen_offset] if chosen_offset < len(comp_entails_list) else False
+
+                chosen_pairs.append((ref_sent, chosen_span, chosen_comp_entails))
+
+                # Consume the chosen completion span.
+                comp_idx = start + chosen_offset + 1
+
+            # Now compute ref_entails in batch only for the chosen spans (ref -> span).
+            ref_messages = []
+            for ref_sent, span_text, _ in chosen_pairs:
+                if span_text:
+                    ref_messages.append([{"role": "user", "content": prompt.format(sentence_a=ref_sent, sentence_b=span_text)}])
+                else:
+                    ref_messages.append(None)
+
+            # Build a compact batch without empty spans, then scatter results back.
+            compact = [m for m in ref_messages if m is not None]
+            compact_outs = self._hf_chat_batch(compact) if compact else []
+            compact_bools = [_is_true(x) for x in compact_outs]
+
+            ref_entails_list = []
+            p = 0
+            for m in ref_messages:
+                if m is None:
+                    ref_entails_list.append(False)
+                else:
+                    ref_entails_list.append(compact_bools[p] if p < len(compact_bools) else False)
+                    p += 1
+
+            per_ref_scores = []
+            for (ref_sent, span_text, comp_entails), ref_entails in zip(chosen_pairs, ref_entails_list):
+                score = 1.0 if (ref_entails and comp_entails) else (0.5 if (ref_entails or comp_entails) else 0.0)
+                per_ref_scores.append(score)
+
+            rewards.append(sum(per_ref_scores) / len(per_ref_scores) if per_ref_scores else 0.0)
+
         return rewards
 
     def prompts_to_references(self, prompts):
