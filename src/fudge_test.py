@@ -3,6 +3,9 @@ from vllm import LLM, SamplingParams
 from transformers import AutoTokenizer
 import tqdm
 import json
+import os
+os.environ["VLLM_BATCH_INVARIANT"] = "1"
+
 dataset = load_from_disk('data/wikipedia/dataset/all')
 
 docs = {'en':[],'ja':[],'ko':[],'zh':[]}
