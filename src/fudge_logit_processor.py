@@ -75,6 +75,6 @@ class FudgeProcessor(LogitsProcessor):
             self.tokens_tensor[index, :len(tokens)] = torch.Tensor(tokens).to(torch.int32)
 
     def apply(self, logits: torch.Tensor) -> torch.Tensor:
-        for i in range(self.batch_size):
-            print("decoding:",self.tokenizer.decode(self.tokens_tensor[i].tolist(),skip_special_tokens=True))
+        #for i in range(self.batch_size):
+            #print("decoding:",self.tokenizer.decode(self.tokens_tensor[i].tolist(),skip_special_tokens=True))
         return self.levelWeighter(self.tokens_tensor,logits,self.lang,self.level,self.fudge_topk,self.wait)
