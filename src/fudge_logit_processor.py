@@ -17,7 +17,9 @@ class LevelWeighter:
         texts = [self.tokenizer.decode(sequence.tolist(),keep_special_tokens=False) for sequence in sequences ]
         rewards = self.assessor.reward_vocab_level(texts,len(texts) * [level] ,len(texts)*[lang])
         return torch.Tensor(rewards)
-    def __call__(self, generated_input_ids: torch.LongTensor, scores: torch.FloatTensor,lang,level,topk,wait=-1) -> torch.FloatTensor:        
+    def __call__(self, generated_input_ids: torch.LongTensor, scores: torch.FloatTensor,lang,level,topk,wait=-1) -> torch.FloatTensor:     
+        scores = scores.to('cuda')
+        generated_input_ids = generated_input_ids.to('cuda')   
         generated_input_ids = generated_input_ids[:,-wait:]
         top_scores, top_score_indices = torch.topk(scores, topk, dim=1)
         
