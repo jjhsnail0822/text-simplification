@@ -25,7 +25,7 @@ result =   {
 }
 def run():
     model_id = "Qwen/Qwen3-4B-Instruct-2507"
-    llm = LLM(model_id, max_model_len=1024,max_num_seqs=32,logits_processors=['fudge_logit_processor:FudgeProcessor'])
+    llm = LLM(model_id, max_model_len=1024,max_num_seqs=1,logits_processors=['fudge_logit_processor:FudgeProcessor'])
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     for data in tqdm.tqdm(dataset['test']):
         # print(data)
