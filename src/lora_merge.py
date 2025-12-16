@@ -5,8 +5,8 @@ base_model_name = "Qwen/Qwen3-4B-Instruct-2507"
 model = AutoModelForCausalLM.from_pretrained(base_model_name)
 tokenizer = AutoTokenizer.from_pretrained(base_model_name)
 
-lora_path = "results/grpo/Qwen3-4B-Instruct-2507-GRPO-14B/checkpoint-5000"
-save_path = "results/grpo/Qwen3-4B-Instruct-2507-GRPO-14B/checkpoint-5000-merged"
+lora_path = "results/grpo/Qwen3-4B-Instruct-2507-GRPO-14B/checkpoint-1400"
+save_path = "results/grpo/Qwen3-4B-Instruct-2507-GRPO-14B/checkpoint-1400-merged"
 
 model = PeftModel.from_pretrained(model, lora_path)
 model = model.merge_and_unload()

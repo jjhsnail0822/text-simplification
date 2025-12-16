@@ -25,10 +25,10 @@ result =   {
 }
 def run():
     model_id = "Qwen/Qwen3-4B-Instruct-2507"
-    llm = LLM(model_id, max_model_len=1024,logits_processors=['fudge_logit_processor:FudgeProcessor'])
+    llm = LLM(model_id, max_model_len=1024,max_num_seqs=32,logits_processors=['fudge_logit_processor:FudgeProcessor'])
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     for data in tqdm.tqdm(dataset['test']):
-        print(data)
+        # print(data)
         language = data['language']
         level = data['level']
         prompt = data['prompt']
@@ -43,7 +43,7 @@ def run():
 
         outputs = llm.generate(text, sampling_params)
         simplified_text = outputs[0].outputs[0].text
-        print(simplified_text)
+        # print(simplified_text)
         result[language][level].append({'original_text':plain_text,'simplified_text':simplified_text})
         with open('data/fudge_result.json','w') as f:
             json.dump(result,f)
