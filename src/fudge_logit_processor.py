@@ -12,7 +12,7 @@ class LevelWeighter:
     # Adapted from https://github.com/JumpyPizza/align-sentence-simplification-with-ESL-learner/blob/main/baselines/conditional_beam_search.py
     def __init__(self,tokenizer):
         self.tokenizer = tokenizer
-        self.assessor = LevelAssessor()
+        self.assessor = LevelAssessor(batch_size=100)
     def compute_score(self,sequences,level,lang):
         texts = [self.tokenizer.decode(sequence.tolist(),keep_special_tokens=False) for sequence in sequences ]
         rewards = self.assessor.reward_vocab_level(texts,len(texts) * [level] ,len(texts)*[lang])

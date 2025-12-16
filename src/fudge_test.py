@@ -39,7 +39,7 @@ def run():
             add_generation_prompt=True,
             enable_thinking=False # Setting enable_thinking=False disables thinking mode
         )
-        sampling_params = SamplingParams(temperature=0,max_tokens=1024,seed=42,extra_args={'lang':language,'level':level,'fudge_topk':100,'wait':20})
+        sampling_params = SamplingParams(temperature=0,max_tokens=1024,seed=42,extra_args={'lang':language,'level':level,'fudge_topk':100,'wait':5})
 
         outputs = llm.generate(text, sampling_params)
         simplified_text = outputs[0].outputs[0].text

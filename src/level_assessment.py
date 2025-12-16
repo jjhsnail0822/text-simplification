@@ -8,7 +8,7 @@ import torch
 import string
 
 class LevelAssessor:
-    def __init__(self):
+    def __init__(self,batch_size=8):
         self.LEVEL_CONVERT = {
             "en": {
                 "CEFR A1": "A1",
@@ -103,6 +103,7 @@ class LevelAssessor:
         # Simple single-entry cache for per-batch spaCy docs
         self._cache_key = None
         self._cache_docs = None
+        self.batch_size = batch_size
 
     def _get_docs_cached(self, completions, langs):
         key = (tuple(completions), tuple(langs))
@@ -116,7 +117,7 @@ class LevelAssessor:
         for lang, idxs in by_lang.items():
             nlp = self.nlp[lang]
             texts = [completions[i] for i in idxs]
-            for i_doc, doc in zip(idxs, nlp.pipe(texts, batch_size=8, n_process=1)):
+            for i_doc, doc in zip(idxs, nlp.pipe(texts, batch_size=self.batch_size, n_process=1)):
                 docs[i_doc] = doc
 
         self._cache_key = key
