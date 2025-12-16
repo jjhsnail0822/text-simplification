@@ -8,8 +8,17 @@ os.environ["VLLM_BATCH_INVARIANT"] = "1"
 
 dataset = load_from_disk('data/wikipedia/dataset/all')
 
-docs = {'en':[],'ja':[],'ko':[],'zh':[]}
-result =   {
+
+def save_checkpoint(result):
+
+    with open('data/fudge_temp.json','w') as f:
+        json.dump(result,f)
+        f.flush()
+        os.fsync(f.fileno())    
+    os.replace('data/fudge_temp.json','data/fudge_intermediate.json')
+def run():
+    result =   {
+    "size":0,
     "en": {
         "CEFR A1": [], "CEFR A2": [], "CEFR B1": [], "CEFR B2": [], "CEFR C1": [], "CEFR C2": []
     },
@@ -22,13 +31,17 @@ result =   {
     "zh": {
         "HSK 3.0 Level 1": [], "HSK 3.0 Level 2": [], "HSK 3.0 Level 3": [], "HSK 3.0 Level 4": [], "HSK 3.0 Level 5": [], "HSK 3.0 Level 6": [], "HSK 3.0 Level 7-9": []
     }
-}
-def run():
+    }
     model_id = "Qwen/Qwen3-4B-Instruct-2507"
     llm = LLM(model_id, max_model_len=1024,logits_processors=['fudge_logit_processor:FudgeProcessor'])
     tokenizer = AutoTokenizer.from_pretrained(model_id)
-    for data in tqdm.tqdm(dataset['test']):
-        print(data)
+    try:
+        with open('data/fudge_intermediate.json') as f:
+            result = json.load(f)
+    except:
+        pass
+    for i,data in enumerate(tqdm.tqdm(dataset['test'])):
+        if i < result['size']:continue
         language = data['language']
         level = data['level']
         prompt = data['prompt']
@@ -45,7 +58,10 @@ def run():
         simplified_text = outputs[0].outputs[0].text
         print(simplified_text)
         result[language][level].append({'original_text':plain_text,'simplified_text':simplified_text})
-        with open('data/fudge_result.json','w') as f:
-            json.dump(result,f)
+        result['size'] += 1
+        save_checkpoint(result)
+    with open('data/fudge_results.json','w') as f:
+        json.dump(result,f)
+
 if __name__ == '__main__':
     run()
