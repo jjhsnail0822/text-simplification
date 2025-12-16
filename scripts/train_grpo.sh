@@ -12,12 +12,15 @@ export EVALUATOR_MODEL_ID="Qwen/Qwen3-4B-Instruct-2507"
 export OUTPUT_DIR="results/grpo/Qwen3-4B-Instruct-2507-GRPO-4B"
 
 export USE_EVAL_VLLM=1
+export VLLM_BATCH_INVARIANT=1
 export EVAL_VLLM_ENDPOINT=http://localhost:8008/v1
 
 CUDA_VISIBLE_DEVICES=0 vllm serve $EVALUATOR_MODEL_ID \
-  --port 8008 --tensor-parallel-size 1 --gpu-memory-utilization 0.95 \
+  --port 8008 --data-parallel-size 1 --gpu-memory-utilization 0.95 \
   --served-model-name evaluator \
   --max-model-len 1024 \
+  --uvicorn-log-level warning \
+  --disable-uvicorn-access-log \
   --disable-log-requests \
   > logs/vllm-$SLURM_JOB_ID.log 2>&1 &
 VLLM_PID=$!
@@ -27,8 +30,7 @@ until curl -sSf http://localhost:8008/health >/dev/null; do
   sleep 30
 done
 
-export CUDA_VISIBLE_DEVICES=1,2,3,0
-export AUX_GPU_ID=3
+export CUDA_VISIBLE_DEVICES=1,2,3
 
 echo "Starting training..."
 accelerate launch --num_processes 3 src/train_grpo_big.py

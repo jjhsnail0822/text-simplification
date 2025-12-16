@@ -4,7 +4,7 @@ from level_assessment import LevelAssessor
 
 def main():
     # model_id = "Qwen/Qwen3-4B-Instruct-2507"
-    model_id = "results/grpo/Qwen3-4B-Instruct-2507-GRPO-14B/checkpoint-5000-merged"
+    model_id = "results/grpo/Qwen3-4B-Instruct-2507-GRPO-14B/checkpoint-1400-merged"
 
     sampling_params = SamplingParams(max_tokens=1024)
     llm = LLM(model_id, max_model_len=1024)

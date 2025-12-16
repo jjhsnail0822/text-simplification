@@ -28,12 +28,6 @@ MAX_COMPLETION_LENGTH = 512
 
 MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen3-4B-Instruct-2507")
 
-AUX_GPU_ID = int(os.environ.get("AUX_GPU_ID", "0"))
-if torch.cuda.is_available() and AUX_GPU_ID >= 0:
-    AUX_DEVICE = torch.device(f"cuda:{AUX_GPU_ID}")
-else:
-    AUX_DEVICE = torch.device("cpu")
-
 evaluator_model_id = os.environ.get("EVALUATOR_MODEL_ID", "Qwen/Qwen3-4B-Instruct-2507")
 
 save_dir = os.environ.get("OUTPUT_DIR", "results/grpo/Qwen3-4B-Instruct-2507-GRPO")
@@ -70,33 +64,13 @@ _vllm_client = None
 
 class RewardFunctionContainer:
     def __init__(self):
-        self._aux_device = AUX_DEVICE
-        
-    def _get_local_device(self):
-        return self._aux_device
+        pass
 
     def _get_vllm_client(self):
         global _vllm_client
         if _vllm_client is None:
             _vllm_client = OpenAI(base_url=EVAL_VLLM_ENDPOINT, api_key="EMPTY")
         return _vllm_client
-
-    def get_evaluator_hf_gpu(self):
-        global _evaluator_hf_model, _evaluator_hf_tokenizer, _evaluator_device, _evaluator_dtype
-        if _evaluator_hf_model is None:
-            _evaluator_device = self._get_local_device()
-            if _evaluator_device.type == "cuda":
-                supports_bf16 = torch.cuda.is_bf16_supported()
-                _evaluator_dtype = torch.bfloat16 if supports_bf16 else torch.float16
-            else:
-                _evaluator_dtype = torch.float32
-            _evaluator_hf_tokenizer = AutoTokenizer.from_pretrained(evaluator_model_id)
-            _evaluator_hf_model = AutoModelForCausalLM.from_pretrained(
-                evaluator_model_id,
-                torch_dtype=_evaluator_dtype,
-            ).to(_evaluator_device)
-            _evaluator_hf_model.eval()
-        return _evaluator_hf_model, _evaluator_hf_tokenizer, _evaluator_device, _evaluator_dtype
 
     async def _process_batch_async(self, messages_batch):
         async with AsyncOpenAI(base_url=EVAL_VLLM_ENDPOINT, api_key="EMPTY") as client:
@@ -119,46 +93,6 @@ class RewardFunctionContainer:
     def _hf_chat_batch(self, messages_batch):
         if USE_EVAL_VLLM:
             return asyncio.run(self._process_batch_async(messages_batch))
-
-        # HF fallback
-        model, tok, device, dtype = self.get_evaluator_hf_gpu()
-        results = []
-        for messages in messages_batch:
-            if 'qwen3' in evaluator_model_id.lower():
-                text = tok.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True,
-                    padding=False,
-                    enable_thinking=False,
-                )
-            else:
-                text = tok.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True,
-                    padding=False,
-                )
-            enc = tok(
-                text,
-                return_tensors="pt",
-                truncation=True,
-                max_length=MAX_PROMPT_LENGTH - 10,
-            ).to(device)
-
-            with torch.no_grad():
-                gen = model.generate(
-                    **enc,
-                    max_new_tokens=2,
-                    do_sample=False,
-                    pad_token_id=tok.eos_token_id,
-                )
-
-            input_length = enc["attention_mask"].sum(dim=1)[0]
-            new_tokens = gen[0, input_length:]
-            txt = tok.decode(new_tokens, skip_special_tokens=True).strip()
-            results.append(txt)
-        return results
 
     # Truncate long inputs using the global tokenizer
     def truncate_prompt(self, example):
@@ -305,91 +239,197 @@ class RewardFunctionContainer:
         references = self.prompts_to_references(kwargs["prompts"])
         langs = kwargs["language"]
 
-        rewards = []
-        for comp, ref, lang in zip(completion_contents, references, langs):
-            sentences_comp = self.split_sentence(comp, lang)
-            sentences_ref = self.split_sentence(ref, lang)
+        n = len(completion_contents)
+        rewards = [0.0] * n
 
-            if len(sentences_comp) < len(sentences_ref) or len(sentences_ref) == 0:
-                rewards.append(0.0)
+        # 1) Pre-split sentences for ALL samples once
+        comp_sents_all = []
+        ref_sents_all = []
+        for comp, ref, lang in zip(completion_contents, references, langs):
+            comp_sents_all.append(self.split_sentence(comp, lang))
+            ref_sents_all.append(self.split_sentence(ref, lang))
+
+        # 2) Fast path across samples: sentence-count match => strict 1:1 mapping
+        one_to_one_idxs = [
+            i for i in range(n)
+            if len(ref_sents_all[i]) > 0 and len(comp_sents_all[i]) == len(ref_sents_all[i])
+        ]
+
+        # Build a single big batch:
+        # For each sentence pair, ask BOTH directions (comp->ref, ref->comp).
+        all_messages = []
+        metas = []  # (sample_i, sent_j, direction) direction: 0=comp->ref, 1=ref->comp
+        for i in one_to_one_idxs:
+            comp_sents = comp_sents_all[i]
+            ref_sents = ref_sents_all[i]
+            for j in range(len(ref_sents)):
+                a = comp_sents[j].strip()
+                b = ref_sents[j].strip()
+                all_messages.append([{"role": "user", "content": prompt.format(sentence_a=a, sentence_b=b)}])
+                metas.append((i, j, 0))
+                all_messages.append([{"role": "user", "content": prompt.format(sentence_a=b, sentence_b=a)}])
+                metas.append((i, j, 1))
+
+        outs = self._hf_chat_batch(all_messages) if all_messages else []
+        bools = [_is_true(x) for x in outs] if outs else []
+
+        comp_entails_map = {}
+        ref_entails_map = {}
+        for i in one_to_one_idxs:
+            L = len(ref_sents_all[i])
+            comp_entails_map[i] = [False] * L
+            ref_entails_map[i] = [False] * L
+
+        for k, (i, j, direction) in enumerate(metas):
+            val = bools[k] if k < len(bools) else False
+            if direction == 0:
+                comp_entails_map[i][j] = val
+            else:
+                ref_entails_map[i][j] = val
+
+        processed = set()
+        for i in one_to_one_idxs:
+            L = len(ref_sents_all[i])
+            if L == 0:
+                rewards[i] = 0.0
+                processed.add(i)
+                continue
+            per_ref_scores = []
+            for j in range(L):
+                ce = comp_entails_map[i][j]
+                re = ref_entails_map[i][j]
+                score = 1.0 if (re and ce) else (0.5 if (re or ce) else 0.0)
+                per_ref_scores.append(score)
+            rewards[i] = sum(per_ref_scores) / len(per_ref_scores) if per_ref_scores else 0.0
+            processed.add(i)
+
+        # 3) Remaining samples: keep existing greedy span behavior (but reuse the pre-split sentences)
+        for idx in range(n):
+            if idx in processed:
                 continue
 
+            sentences_comp = comp_sents_all[idx]
+            sentences_ref = ref_sents_all[idx]
+            lang = langs[idx]
+
+            if len(sentences_comp) < len(sentences_ref) or len(sentences_ref) == 0:
+                rewards[idx] = 0.0
+                continue
+
+            chosen_pairs = []
+
+            ref_i = 0
             comp_idx = 0
+            last_ref_idx = len(sentences_ref) - 1
 
-            # Store chosen spans first; compute ref->span entailment in a single batch later.
-            chosen_pairs = []  # list of (ref_sent, chosen_span, comp_entails_bool)
+            while ref_i < len(sentences_ref):
+                ref_sent = sentences_ref[ref_i]
 
-            for ref_i, ref_sent in enumerate(sentences_ref):
-                # If this is the last reference sentence, absorb all remaining completion sentences.
-                if ref_i == len(sentences_ref) - 1:
+                # Last reference sentence absorbs all remaining completion sentences.
+                if ref_i == last_ref_idx:
                     span_text = " ".join(sentences_comp[comp_idx:]).strip()
                     if not span_text:
                         chosen_pairs.append((ref_sent, "", False))
-                        comp_idx = len(sentences_comp)
-                        continue
+                        break
 
-                    # Span decision uses comp_entails only (span -> ref).
                     msg = [[{"role": "user", "content": prompt.format(sentence_a=span_text, sentence_b=ref_sent)}]]
                     out = self._hf_chat_batch(msg)
                     comp_entails = _is_true(out[0]) if out else False
-
                     chosen_pairs.append((ref_sent, span_text, comp_entails))
-                    comp_idx = len(sentences_comp)
+                    break
+
+                # --- Phase 1: try span=1 for as many remaining refs as possible in a single batch. ---
+                block_metas = []   # (ref_idx, start_idx, cand_text, ref_text)
+                block_messages = []
+
+                tmp_ref_i = ref_i
+                tmp_comp_idx = comp_idx
+
+                while tmp_ref_i < last_ref_idx:
+                    start = tmp_comp_idx
+                    remaining_refs_after = len(sentences_ref) - (tmp_ref_i + 1)
+                    max_end = len(sentences_comp) - remaining_refs_after - 1  # inclusive
+                    max_end = min(max_end, start + 4 - 1)  # cap span growth to 4 sentences
+
+                    if start >= len(sentences_comp) or start > max_end:
+                        break
+
+                    cand = sentences_comp[start].strip()
+                    block_messages.append(
+                        [{"role": "user", "content": prompt.format(sentence_a=cand, sentence_b=sentences_ref[tmp_ref_i])}]
+                    )
+                    block_metas.append((tmp_ref_i, start, cand, sentences_ref[tmp_ref_i]))
+
+                    tmp_ref_i += 1
+                    tmp_comp_idx += 1
+
+                block_outs = self._hf_chat_batch(block_messages) if block_messages else []
+                block_bools = [_is_true(x) for x in block_outs] if block_outs else []
+
+                first_fail_meta = None
+                for k, meta in enumerate(block_metas):
+                    m_ref_i, m_start, m_cand, m_ref_sent = meta
+                    ce = block_bools[k] if k < len(block_bools) else False
+                    if ce:
+                        chosen_pairs.append((m_ref_sent, m_cand, True))
+                        ref_i = m_ref_i + 1
+                        comp_idx = m_start + 1
+                    else:
+                        first_fail_meta = meta
+                        break
+
+                if block_metas and first_fail_meta is None:
                     continue
 
+                if first_fail_meta is not None:
+                    ref_i, comp_idx, _, ref_sent = first_fail_meta
+
+                # --- Phase 2: greedy span expansion for the current ref ---
                 start = comp_idx
                 remaining_refs_after = len(sentences_ref) - (ref_i + 1)
-                max_end = len(sentences_comp) - remaining_refs_after - 1  # inclusive
+                max_end = len(sentences_comp) - remaining_refs_after - 1
+                max_end = min(max_end, start + 4 - 1)
 
-                # Cap the span expansion to at most 10 sentences.
-                max_end = min(max_end, start + 10 - 1)
-
-                # If no candidates are available under constraints, fall back to using 1 completion sentence.
                 if start > max_end:
                     if start >= len(sentences_comp):
-                        chosen_pairs.append((ref_sent, "", False))
+                        chosen_pairs.append((sentences_ref[ref_i], "", False))
+                        ref_i += 1
                         continue
+
                     chosen_span = sentences_comp[start].strip()
-                    # Span decision uses comp_entails only (span -> ref).
-                    msg = [[{"role": "user", "content": prompt.format(sentence_a=chosen_span, sentence_b=ref_sent)}]]
+                    msg = [[{"role": "user", "content": prompt.format(sentence_a=chosen_span, sentence_b=sentences_ref[ref_i])}]]
                     out = self._hf_chat_batch(msg)
                     comp_entails = _is_true(out[0]) if out else False
 
-                    chosen_pairs.append((ref_sent, chosen_span, comp_entails))
+                    chosen_pairs.append((sentences_ref[ref_i], chosen_span, comp_entails))
                     comp_idx = start + 1
+                    ref_i += 1
                     continue
 
                 candidates = [" ".join(sentences_comp[start : end + 1]).strip() for end in range(start, max_end + 1)]
-
-                # Only request comp_entails for span selection (candidate -> reference).
                 comp_messages = [
-                    [{"role": "user", "content": prompt.format(sentence_a=cand, sentence_b=ref_sent)}]
+                    [{"role": "user", "content": prompt.format(sentence_a=cand, sentence_b=sentences_ref[ref_i])}]
                     for cand in candidates
                 ]
                 comp_outs = self._hf_chat_batch(comp_messages) if comp_messages else []
                 comp_entails_list = [_is_true(x) for x in comp_outs]
 
-                # Greedy expansion rule:
-                # keep adding completion sentences until (completion_span entails reference) becomes True.
                 chosen_offset = None
                 for offset, ce in enumerate(comp_entails_list):
                     if ce:
                         chosen_offset = offset
                         break
-
-                # If we never find an entailing span, use only 1 completion sentence.
                 if chosen_offset is None:
                     chosen_offset = 0
 
                 chosen_span = candidates[chosen_offset]
                 chosen_comp_entails = comp_entails_list[chosen_offset] if chosen_offset < len(comp_entails_list) else False
 
-                chosen_pairs.append((ref_sent, chosen_span, chosen_comp_entails))
-
-                # Consume the chosen completion span.
+                chosen_pairs.append((sentences_ref[ref_i], chosen_span, chosen_comp_entails))
                 comp_idx = start + chosen_offset + 1
+                ref_i += 1
 
-            # Now compute ref_entails in batch only for the chosen spans (ref -> span).
+            # --- Final phase: compute ref->span entailment for the chosen spans in a single batch. ---
             ref_messages = []
             for ref_sent, span_text, _ in chosen_pairs:
                 if span_text:
@@ -397,7 +437,6 @@ class RewardFunctionContainer:
                 else:
                     ref_messages.append(None)
 
-            # Build a compact batch without empty spans, then scatter results back.
             compact = [m for m in ref_messages if m is not None]
             compact_outs = self._hf_chat_batch(compact) if compact else []
             compact_bools = [_is_true(x) for x in compact_outs]
@@ -412,11 +451,11 @@ class RewardFunctionContainer:
                     p += 1
 
             per_ref_scores = []
-            for (ref_sent, span_text, comp_entails), ref_entails in zip(chosen_pairs, ref_entails_list):
+            for (_, _, comp_entails), ref_entails in zip(chosen_pairs, ref_entails_list):
                 score = 1.0 if (ref_entails and comp_entails) else (0.5 if (ref_entails or comp_entails) else 0.0)
                 per_ref_scores.append(score)
 
-            rewards.append(sum(per_ref_scores) / len(per_ref_scores) if per_ref_scores else 0.0)
+            rewards[idx] = sum(per_ref_scores) / len(per_ref_scores) if per_ref_scores else 0.0
 
         return rewards
 
@@ -485,21 +524,21 @@ class RewardFunctionContainer:
             rewards.append(sum(reward) / len(reward))
         return rewards
 
-    def reward_lm_fluency(self, completions, **kwargs):
-        model, tok, device, dtype = self.get_evaluator_hf_gpu()
-        texts = [c[0]["content"] for c in completions]
-        scores = []
-        model.eval()
-        with torch.no_grad():
-            for txt in texts:
-                enc = tok(txt, return_tensors="pt", truncation=True, max_length=MAX_COMPLETION_LENGTH).to(device)
-                if enc["input_ids"].size(1) < 1:
-                    scores.append(0.0)
-                    continue
-                out = model(**enc, labels=enc["input_ids"])
-                loss = float(out.loss)
-                scores.append(1.0 / (1.0 + loss))
-        return scores
+    # def reward_lm_fluency(self, completions, **kwargs):
+    #     model, tok, device, dtype = self.get_evaluator_hf_gpu()
+    #     texts = [c[0]["content"] for c in completions]
+    #     scores = []
+    #     model.eval()
+    #     with torch.no_grad():
+    #         for txt in texts:
+    #             enc = tok(txt, return_tensors="pt", truncation=True, max_length=MAX_COMPLETION_LENGTH).to(device)
+    #             if enc["input_ids"].size(1) < 1:
+    #                 scores.append(0.0)
+    #                 continue
+    #             out = model(**enc, labels=enc["input_ids"])
+    #             loss = float(out.loss)
+    #             scores.append(1.0 / (1.0 + loss))
+    #     return scores
 
     def reward_bertscore(self, completions, **kwargs):
         # Compute BERTScore F1 between completions and reference text in prompt and return as rewards
@@ -587,8 +626,9 @@ def main():
         num_generations=8,
         per_device_train_batch_size=16,
         gradient_accumulation_steps=1,
-        # vllm_gpu_memory_utilization=0.2,
+        # vllm_gpu_memory_utilization=0.5,
         # vllm_tensor_parallel_size=2,
+        vllm_max_model_length=1024,
         dataloader_num_workers=4,
         dataloader_pin_memory=True,
         ddp_find_unused_parameters=False if 'qwen3' in MODEL_ID.lower() else True,
@@ -600,7 +640,7 @@ def main():
         # weights for [vocab_level, unique_words, bertscore, entailment, length_ratio, distinct_n, text_coherence]
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
         # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-        beta = 0.001,
+        beta = 0.01,
         reward_weights=[2.0, 1.0, 1.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
         seed=42,
