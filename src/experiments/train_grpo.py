@@ -1,7 +1,7 @@
 from peft import LoraConfig
 from datasets import load_from_disk
 from trl import GRPOConfig, GRPOTrainer
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModelForSequenceClassification
 import os
 from bert_score import BERTScorer
 import torch
@@ -9,6 +9,8 @@ from level_assessment import LevelAssessor
 import re
 import random
 import numpy as np
+from openai import OpenAI, AsyncOpenAI
+import asyncio
 
 def set_seed(seed):
     random.seed(seed)
@@ -24,7 +26,13 @@ os.environ.setdefault("WANDB_PROJECT", "text-simplification")
 MAX_PROMPT_LENGTH = 512
 MAX_COMPLETION_LENGTH = 512
 
-MODEL_ID = "google/gemma-3-4b-it"
+VLLM_CHUNK_SIZE = 128
+
+MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen3-4B-Instruct-2507")
+
+evaluator_model_id = os.environ.get("EVALUATOR_MODEL_ID", "Qwen/Qwen3-4B-Instruct-2507")
+
+save_dir = os.environ.get("OUTPUT_DIR", "results/grpo/Qwen3-4B-Instruct-2507-GRPO")
 
 # Global placeholders (will be initialized in main)
 tokenizer = None
@@ -32,12 +40,12 @@ bertscorer = None
 level_assessor = None
 spacy_nlp = None
 
-# Lazy init for evaluator vLLM (created on first reward call per process)
-evaluator_model_id = "google/gemma-3-4b-it"
-_evaluator_hf_model = None
-_evaluator_hf_tokenizer = None
-_evaluator_device = None
-_evaluator_dtype = None
+# NLI entailment model (multilingual)
+nli_tokenizer = None
+nli_model = None
+nli_device = None
+
+entail_id = None
 
 LANGUAGE_CHARSETS = {
     "en": re.compile(r"[A-Za-z]"),
@@ -53,70 +61,41 @@ LANG_TO_LANGUAGE = {
     "zh": "Chinese",
 }
 
+EVAL_VLLM_ENDPOINT = os.environ.get("EVAL_VLLM_ENDPOINT", "http://localhost:8008/v1")
+USE_EVAL_VLLM = os.environ.get("USE_EVAL_VLLM", "0") == "1"
+_vllm_client = None
+
 class RewardFunctionContainer:
     def __init__(self):
         pass
-        
-    def _get_local_device(self):
-        if torch.cuda.is_available():
-            local_rank = int(os.environ.get("LOCAL_RANK", "0"))
-            torch.cuda.set_device(local_rank)
-            return torch.device(f"cuda:{local_rank}")
-        return torch.device("cpu")
 
-    def get_evaluator_hf_gpu(self):
-        global _evaluator_hf_model, _evaluator_hf_tokenizer, _evaluator_device, _evaluator_dtype
-        if _evaluator_hf_model is None:
-            _evaluator_device = self._get_local_device()
-            # Prefer bf16 if available, otherwise fp16
-            _evaluator_dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float16
-            _evaluator_hf_tokenizer = AutoTokenizer.from_pretrained(evaluator_model_id)
-            _evaluator_hf_model = AutoModelForCausalLM.from_pretrained(
-                evaluator_model_id,
-                dtype=_evaluator_dtype,
-            ).to(_evaluator_device)
-            _evaluator_hf_model.eval()
-        return _evaluator_hf_model, _evaluator_hf_tokenizer, _evaluator_device, _evaluator_dtype
+    def _get_vllm_client(self):
+        global _vllm_client
+        if _vllm_client is None:
+            _vllm_client = OpenAI(base_url=EVAL_VLLM_ENDPOINT, api_key="EMPTY")
+        return _vllm_client
+
+    async def _process_batch_async(self, messages_batch):
+        async with AsyncOpenAI(base_url=EVAL_VLLM_ENDPOINT, api_key="EMPTY") as client:
+            tasks = []
+            for messages in messages_batch:
+                tasks.append(
+                    client.chat.completions.create(
+                        model="evaluator",
+                        messages=messages,
+                        max_tokens=2,
+                        temperature=0.0,
+                        extra_body={
+                            "chat_template_kwargs": {"enable_thinking": False},
+                        } if 'qwen3' in evaluator_model_id.lower() else None,
+                    )
+                )
+            responses = await asyncio.gather(*tasks)
+        return [r.choices[0].message.content.strip() for r in responses]
 
     def _hf_chat_batch(self, messages_batch):
-        model, tok, device, dtype = self.get_evaluator_hf_gpu()
-        results = []
-        for messages in messages_batch:
-            if 'qwen3' in evaluator_model_id.lower():
-                text = tok.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True,
-                    padding=False,
-                    enable_thinking=False,
-                )
-            else:
-                text = tok.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True,
-                    padding=False,
-                )
-            enc = tok(
-                text,
-                return_tensors="pt",
-                truncation=True,
-                max_length=MAX_PROMPT_LENGTH - 10,
-            ).to(device)
-
-            with torch.no_grad():
-                gen = model.generate(
-                    **enc,
-                    max_new_tokens=1,
-                    do_sample=False,
-                    pad_token_id=tok.eos_token_id,
-                )
-
-            input_length = enc["attention_mask"].sum(dim=1)[0]
-            new_tokens = gen[0, input_length:]
-            txt = tok.decode(new_tokens, skip_special_tokens=True).strip()
-            results.append(txt)
-        return results
+        if USE_EVAL_VLLM:
+            return asyncio.run(self._process_batch_async(messages_batch))
 
     # Truncate long inputs using the global tokenizer
     def truncate_prompt(self, example):
@@ -132,7 +111,14 @@ class RewardFunctionContainer:
     def split_sentence(self, text, lang):
         nlp = spacy_nlp[lang]
         doc = nlp(text)
-        sentences = [sent.text for sent in doc.sents]
+
+        # Filter out sentences that are only whitespace/newlines.
+        sentences = []
+        for sent in doc.sents:
+            s = (sent.text or "").strip()
+            if not s:
+                continue
+            sentences.append(s)
         return sentences
 
     def _disallowed_chars_ratio(self, text, lang, parenthesis=True):
@@ -166,32 +152,34 @@ class RewardFunctionContainer:
             "Answer with a single number (0-10) only, and say nothing else.\n\n"
             "[TEXT]\n{text}"
         )
-        # prompt = (
-        #     "Rate the coherence of the given {language} text on a scale from 0 to 10. "
-        #     "Answer with a single number (0-10) only, and say nothing else.\n\n"
-        #     "[TEXT]\n{text}"
-        # )
-        # prompt = (
-        #     "Decide if the given {language} text makes sense in terms of coherence. "
-        #     "Answer with a single word: True or False.\n\n"
-        #     "[TEXT]\n{text}"
-        # )
         completion_contents = [completion[0]["content"] for completion in completions]
         langs = kwargs['language']
-        rewards = []
 
+        all_messages = []
         for i, comp in enumerate(completion_contents):
             language = LANG_TO_LANGUAGE[langs[i]]
             prompt_filled = prompt.format(language=language, text=comp)
-            batched_messages = [[{"role": "user", "content": prompt_filled}]]
-            texts = self._hf_chat_batch(batched_messages)
-            t = texts[0].strip().lower()
-            # reward = 1.0 if "true" in t and "false" not in t else 0.0
-            # convert to score out of 10
+            all_messages.append([{"role": "user", "content": prompt_filled}])
+
+        # Chunk to avoid firing too many concurrent requests at once.
+        # This reduces tail latency when multiple training processes hit the same vLLM server.
+        chunk_size = VLLM_CHUNK_SIZE
+        all_texts = []
+        for start in range(0, len(all_messages), chunk_size):
+            batch_out = self._hf_chat_batch(all_messages[start : start + chunk_size]) or []
+            all_texts.extend(batch_out)
+
+        # If something went wrong, pad to keep indexing safe.
+        if len(all_texts) < len(all_messages):
+            all_texts.extend(["0"] * (len(all_messages) - len(all_texts)))
+
+        rewards = []
+        for t in all_texts:
+            t = (t or "").strip().lower()
             score = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
             score = max(0, min(10, score))
-            reward = score / 10.0
-            rewards.append(reward)
+            rewards.append(score / 10.0)
+
         return rewards
 
     def reward_language_purity(self, completions, **kwargs):
@@ -250,53 +238,172 @@ class RewardFunctionContainer:
         return rewards
 
     def reward_entailment(self, completions, **kwargs):
-        prompt = (
-            "Decide if Sentence A entails Sentence B. "
-            "If B must be true given A, answer True. Otherwise, answer False. "
-            "Answer with a single word: True or False.\n\n"
-            "[Sentence A]\n{sentence_a}\n\n[Sentence B]\n{sentence_b}"
-        )
+        def _nli_entails_batch(premises, hypotheses, batch_size=32):
+            # Predict entailment for each (premise, hypothesis) pair.
+            # Returns list[bool] of same length.
+            assert nli_tokenizer is not None and nli_model is not None and nli_device is not None
+            assert entail_id is not None
+
+            out_bools = []
+            nli_model.eval()
+            with torch.no_grad():
+                for start in range(0, len(premises), batch_size):
+                    p = premises[start : start + batch_size]
+                    h = hypotheses[start : start + batch_size]
+                    enc = nli_tokenizer(
+                        p,
+                        h,
+                        truncation=True,
+                        padding=True,
+                        return_tensors="pt",
+                        max_length=MAX_COMPLETION_LENGTH//2,
+                    )
+                    enc = {k: v.to(nli_device) for k, v in enc.items()}
+                    logits = nli_model(**enc).logits
+                    pred = torch.argmax(logits, dim=-1)
+                    out_bools.extend((pred == entail_id).tolist())
+            return out_bools
+
         completion_contents = [completion[0]["content"] for completion in completions]
-        references = self.prompts_to_references(kwargs['prompts'])
-        langs = kwargs['language']
-        rewards = []
+        references = self.prompts_to_references(kwargs["prompts"])
+        langs = kwargs["language"]
 
-        for i, (comp, ref) in enumerate(zip(completion_contents, references)):
-            sentences_comp = self.split_sentence(comp, langs[i])
-            sentences_ref = self.split_sentence(ref, langs[i])
-            # n_pairs = min(len(sentences_comp), len(sentences_ref)) # use the minimum number of sentence pairs
-            # if n_pairs == 0:
-            #     rewards.append(0.0)
-            #     continue
-            # sentences_comp = sentences_comp[:n_pairs]
-            # sentences_ref = sentences_ref[:n_pairs]
+        n = len(completion_contents)
+        rewards = [0.0] * n
 
-            if len(sentences_comp) != len(sentences_ref):
-                # Skip entailment reward if number of sentences do not match
-                rewards.append(0.0)
+        # 1) Pre-split sentences for ALL samples once
+        comp_sents_all = []
+        ref_sents_all = []
+        for comp, ref, lang in zip(completion_contents, references, langs):
+            comp_sents_all.append(self.split_sentence(comp, lang))
+            ref_sents_all.append(self.split_sentence(ref, lang))
+
+        # 2) Build aligned pairs for ALL samples first.
+        #    For 1:1 sentence counts, no BERTScore is needed.
+        aligned_pairs_by_sample = [[] for _ in range(n)]  # list[(ref_sent, comp_or_span_text)]
+        invalid = set()
+
+        for idx in range(n):
+            sentences_comp = comp_sents_all[idx]
+            sentences_ref = ref_sents_all[idx]
+
+            if len(sentences_ref) == 0:
+                invalid.add(idx)
+                continue
+            if len(sentences_comp) < len(sentences_ref):
+                invalid.add(idx)
                 continue
 
-            entailment_scores = []
-            batched_messages = []
-            for sent_a, sent_b in zip(sentences_ref, sentences_comp):
-                prompt_1 = prompt.format(sentence_a=sent_a, sentence_b=sent_b)
-                batched_messages.append([{"role": "user", "content": prompt_1}])
-                # reverse direction
-                prompt_2 = prompt.format(sentence_a=sent_b, sentence_b=sent_a)
-                batched_messages.append([{"role": "user", "content": prompt_2}])
+            # 2-A) Exact 1:1 sentence mapping (fast path)
+            if len(sentences_comp) == len(sentences_ref):
+                aligned_pairs_by_sample[idx] = [
+                    ((r or "").strip(), (c or "").strip())
+                    for r, c in zip(sentences_ref, sentences_comp)
+                ]
+                continue
 
-            texts = self._hf_chat_batch(batched_messages)
-            # Robust parse: any 'true' token wins, otherwise false.
-            for text in texts:
-                t = text.strip().lower()
-                entailment_scores.append(1.0 if "true" in t and "false" not in t else 0.0)
-            # Symmetric aggregation: 1.0 if both directions are True, 0.5 if one, 0 if none
-            reward = 0.0
-            for j in range(0, len(entailment_scores), 2):
-                a_to_b, b_to_a = entailment_scores[j], entailment_scores[j+1]
-                reward += 1.0 if (a_to_b == 1.0 and b_to_a == 1.0) else (0.5 if (a_to_b + b_to_a == 1.0) else 0.0)
-            reward /= (len(entailment_scores) // 2)
-            rewards.append(reward)
+            # 2-B) Sentence-count mismatch => BERTScore span alignment
+            # We pick span length (1..4) that maximizes BERTScore F1 per reference sentence.
+            chosen_pairs = []  # list[(ref_sent, span_text)]
+            comp_idx = 0
+            last_ref_idx = len(sentences_ref) - 1
+
+            for ref_i, ref_sent in enumerate(sentences_ref):
+                ref_sent = (ref_sent or "").strip()
+
+                # Last reference sentence absorbs all remaining completion sentences.
+                if ref_i == last_ref_idx:
+                    span_text = " ".join(sentences_comp[comp_idx:]).strip()
+                    chosen_pairs.append((ref_sent, span_text))
+                    break
+
+                remaining_refs_after = len(sentences_ref) - (ref_i + 1)
+                max_end = len(sentences_comp) - remaining_refs_after - 1  # inclusive
+                max_end = min(max_end, comp_idx + 4 - 1)  # cap span growth to 4 sentences
+
+                if comp_idx >= len(sentences_comp) or comp_idx > max_end:
+                    # Not enough completion sentences left to form a valid alignment.
+                    chosen_pairs = []
+                    break
+
+                candidates = [
+                    " ".join(sentences_comp[comp_idx : end + 1]).strip()
+                    for end in range(comp_idx, max_end + 1)
+                ]
+                refs_rep = [ref_sent] * len(candidates)
+
+                with torch.no_grad():
+                    _, _, f1 = bertscorer.score(candidates, refs_rep, verbose=False)
+
+                best_k = int(f1.argmax().item()) if len(candidates) > 0 else 0
+                span_text = candidates[best_k] if candidates else ""
+                chosen_pairs.append((ref_sent, span_text))
+                comp_idx = comp_idx + best_k + 1
+
+            if not chosen_pairs:
+                invalid.add(idx)
+                continue
+
+            aligned_pairs_by_sample[idx] = chosen_pairs
+
+        # 3) Flatten ALL aligned pairs into ONE NLI batch.
+        premises = []
+        hypotheses = []
+        metas = []  # (sample_i, pair_j, direction) direction: 0=comp_or_span->ref, 1=ref->comp_or_span
+
+        for i in range(n):
+            if i in invalid:
+                continue
+            for j, (ref_sent, comp_or_span) in enumerate(aligned_pairs_by_sample[i]):
+                a = (comp_or_span or "").strip()
+                b = (ref_sent or "").strip()
+
+                # direction 0: premise=a entails hypothesis=b ?
+                premises.append(a)
+                hypotheses.append(b)
+                metas.append((i, j, 0))
+
+                # direction 1: premise=b entails hypothesis=a ?
+                premises.append(b)
+                hypotheses.append(a)
+                metas.append((i, j, 1))
+
+        # Predict entailment booleans in batches.
+        bools = _nli_entails_batch(premises, hypotheses, batch_size=32) if premises else []
+
+        # 4) Unflatten results back to per-sample arrays, then compute rewards.
+        comp_entails_by_sample = [[] for _ in range(n)]
+        ref_entails_by_sample = [[] for _ in range(n)]
+        for i in range(n):
+            if i in invalid:
+                rewards[i] = 0.0
+                continue
+            L = len(aligned_pairs_by_sample[i])
+            comp_entails_by_sample[i] = [False] * L
+            ref_entails_by_sample[i] = [False] * L
+
+        for k, (i, j, direction) in enumerate(metas):
+            val = bools[k] if k < len(bools) else False
+            if direction == 0:
+                comp_entails_by_sample[i][j] = val
+            else:
+                ref_entails_by_sample[i][j] = val
+
+        for i in range(n):
+            if i in invalid:
+                rewards[i] = 0.0
+                continue
+            L = len(aligned_pairs_by_sample[i])
+            if L == 0:
+                rewards[i] = 0.0
+                continue
+            per_ref_scores = []
+            for j in range(L):
+                ce = comp_entails_by_sample[i][j]
+                re_ = ref_entails_by_sample[i][j]
+                per_ref_scores.append(1.0 if (re_ and ce) else (0.5 if (re_ or ce) else 0.0))
+            rewards[i] = sum(per_ref_scores) / len(per_ref_scores)
+
         return rewards
 
     def prompts_to_references(self, prompts):
@@ -364,21 +471,21 @@ class RewardFunctionContainer:
             rewards.append(sum(reward) / len(reward))
         return rewards
 
-    def reward_lm_fluency(self, completions, **kwargs):
-        model, tok, device, dtype = self.get_evaluator_hf_gpu()
-        texts = [c[0]["content"] for c in completions]
-        scores = []
-        model.eval()
-        with torch.no_grad():
-            for txt in texts:
-                enc = tok(txt, return_tensors="pt", truncation=True, max_length=MAX_COMPLETION_LENGTH).to(device)
-                if enc["input_ids"].size(1) < 1:
-                    scores.append(0.0)
-                    continue
-                out = model(**enc, labels=enc["input_ids"])
-                loss = float(out.loss)
-                scores.append(1.0 / (1.0 + loss))
-        return scores
+    # def reward_lm_fluency(self, completions, **kwargs):
+    #     model, tok, device, dtype = self.get_evaluator_hf_gpu()
+    #     texts = [c[0]["content"] for c in completions]
+    #     scores = []
+    #     model.eval()
+    #     with torch.no_grad():
+    #         for txt in texts:
+    #             enc = tok(txt, return_tensors="pt", truncation=True, max_length=MAX_COMPLETION_LENGTH).to(device)
+    #             if enc["input_ids"].size(1) < 1:
+    #                 scores.append(0.0)
+    #                 continue
+    #             out = model(**enc, labels=enc["input_ids"])
+    #             loss = float(out.loss)
+    #             scores.append(1.0 / (1.0 + loss))
+    #     return scores
 
     def reward_bertscore(self, completions, **kwargs):
         # Compute BERTScore F1 between completions and reference text in prompt and return as rewards
@@ -408,6 +515,7 @@ class RewardFunctionContainer:
 
 def main():
     global tokenizer, bertscorer, level_assessor, spacy_nlp
+    global nli_tokenizer, nli_model, nli_device, entail_id
 
     # Load dataset
     dataset = load_from_disk("data/wikipedia/dataset/all")
@@ -422,15 +530,34 @@ def main():
     )
     tokenizer = AutoTokenizer.from_pretrained(model_id)
 
-    # # Init BERTScore scorer
-    # device_str = f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
-    # bertscorer = BERTScorer(
-    #     model_type="xlm-roberta-large",
-    #     rescale_with_baseline=False,
-    #     idf=False,
-    #     device=device_str,
-    #     batch_size=32,
-    # )
+    # Init BERTScore scorer
+    device_str = f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
+    bertscore_model_type = "xlm-roberta-large"
+    bertscorer = BERTScorer(
+        model_type=bertscore_model_type,
+        rescale_with_baseline=False,
+        idf=False,
+        device=device_str,
+        batch_size=64,
+    )
+
+    # Init multilingual NLI model for entailment
+    nli_model_name = "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7"
+    nli_tokenizer = AutoTokenizer.from_pretrained(nli_model_name)
+    nli_model = AutoModelForSequenceClassification.from_pretrained(nli_model_name)
+    nli_device = f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
+    nli_model.to(nli_device)
+
+    # Find entailment label id robustly
+    id2label = getattr(nli_model.config, "id2label", None) or {}
+    label2id = {str(v).lower(): int(k) for k, v in id2label.items()} if id2label else {}
+    entail_id = None
+    for key in ["entailment", "entailed"]:
+        if key in label2id:
+            entail_id = label2id[key]
+            break
+    if entail_id is None:
+        raise ValueError("Cannot find entailment label id in NLI model config.")
 
     # Init auxiliary evaluators
     level_assessor = LevelAssessor()
@@ -455,7 +582,7 @@ def main():
 
     # Training configuration
     training_args = GRPOConfig(
-        output_dir="results/grpo/gemma-3-4b-it-GRPO",
+        output_dir=save_dir,
         use_vllm=True,
         vllm_mode="colocate",
         max_prompt_length=MAX_PROMPT_LENGTH,
@@ -464,10 +591,11 @@ def main():
         optim="adamw_8bit",
         gradient_checkpointing_kwargs={"use_reentrant": False},
         num_generations=8,
-        per_device_train_batch_size=2,
-        gradient_accumulation_steps=8,
-        # vllm_gpu_memory_utilization=0.2,
-        # vllm_tensor_parallel_size=4,
+        per_device_train_batch_size=4,
+        gradient_accumulation_steps=4,
+        # vllm_gpu_memory_utilization=0.5,
+        # vllm_tensor_parallel_size=2,
+        vllm_max_model_length=1024,
         dataloader_num_workers=4,
         dataloader_pin_memory=True,
         ddp_find_unused_parameters=False if 'qwen3' in MODEL_ID.lower() else True,
@@ -479,8 +607,8 @@ def main():
         # weights for [vocab_level, unique_words, bertscore, entailment, length_ratio, distinct_n, text_coherence]
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
         # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-        beta = 0.001,
-        reward_weights=[2.0, 1.0, 1.0],
+        beta = 0.002,
+        reward_weights=[3.0, 1.0, 3.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
         seed=42,
     )
