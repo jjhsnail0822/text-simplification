@@ -47,52 +47,99 @@ LANGUAGES = ['en', 'ja', 'ko', 'zh']
 with open("results/llm_evaluation/vocab_level_results.json", 'r', encoding='utf-8') as f:
     vocab_level_results = json.load(f)
 
+def compute_below_exact(score_obj: dict | None, lang: str, target_level: str) -> dict | None:
+    # Compute below-level and exact-level ratios from a score object
+    if not score_obj or "level_counts" not in score_obj:
+        return None
+
+    level_counts = score_obj["level_counts"]
+    total_count = sum(level_counts.values())
+    if total_count <= 0:
+        return {"below_level_score": 0.0, "exact_level_score": 0.0}
+
+    below_level_count = sum(
+        count for lvl, count in level_counts.items()
+        if LEVEL_ORDER[lang][lvl] <= LEVEL_ORDER[lang][target_level]
+    )
+    exact_level_count = level_counts.get(target_level, 0)
+
+    return {
+        "below_level_score": below_level_count / total_count,
+        "exact_level_score": exact_level_count / total_count,
+    }
+
 scores_summary = {}
 for model_name in vocab_level_results:
     lang_level_scores = {}
     for sample in vocab_level_results[model_name]:
         lang = sample['language']
         level = LEVEL_CONVERT[lang][sample['level']]
-        vocab_level_score = sample['vocab_level_score']
-        total_count = sum(vocab_level_score['level_counts'].values())
-        level_counts = vocab_level_score['level_counts']
-        below_level_count = sum(
-            count for lvl, count in level_counts.items()
-            if LEVEL_ORDER[lang][lvl] <= LEVEL_ORDER[lang][level]
-        )
-        exact_level_count = level_counts[level]
 
-        below_level_score = below_level_count / total_count if total_count > 0 else 0
-        exact_level_score = exact_level_count / total_count if total_count > 0 else 0
+        # Output stats (backward compatible)
+        out_stats = compute_below_exact(sample.get("vocab_level_score"), lang, level)
+
+        # Original stats (new)
+        orig_stats = compute_below_exact(sample.get("original_vocab_level_score"), lang, level)
 
         if lang not in lang_level_scores:
             lang_level_scores[lang] = {}
         if level not in lang_level_scores[lang]:
-            lang_level_scores[lang][level] = []
-        lang_level_scores[lang][level].append({'below_level_score': below_level_score, 'exact_level_score': exact_level_score})
+            lang_level_scores[lang][level] = {"output": [], "original": []}
 
-    # calculate average scores
+        if out_stats is not None:
+            lang_level_scores[lang][level]["output"].append(out_stats)
+        if orig_stats is not None:
+            lang_level_scores[lang][level]["original"].append(orig_stats)
+
+    # Calculate average scores
     for lang in lang_level_scores:
         for level in lang_level_scores[lang]:
-            scores = lang_level_scores[lang][level]
-            avg_below_level_score = sum(s['below_level_score'] for s in scores) / len(scores)
-            avg_exact_level_score = sum(s['exact_level_score'] for s in scores) / len(scores)
+            out_list = lang_level_scores[lang][level]["output"]
+            orig_list = lang_level_scores[lang][level]["original"]
+
+            def avg(scores: list[dict]) -> dict | None:
+                # Average a list of {"below_level_score": x, "exact_level_score": y}
+                if not scores:
+                    return None
+                return {
+                    "avg_below_level_score": sum(s["below_level_score"] for s in scores) / len(scores),
+                    "avg_exact_level_score": sum(s["exact_level_score"] for s in scores) / len(scores),
+                }
+
             lang_level_scores[lang][level] = {
-                'avg_below_level_score': avg_below_level_score,
-                'avg_exact_level_score': avg_exact_level_score,
+                "output": avg(out_list),
+                "original": avg(orig_list),
             }
+
     scores_summary[model_name] = lang_level_scores
 
-# sort level keys by LEVEL_ORDER
-# sort language keys by LANGUAGES
+# Sort level keys by LEVEL_ORDER
+# Sort language keys by LANGUAGES
 for model_name in scores_summary:
     print(f"Model: {model_name}")
     for lang in LANGUAGES:
         if lang in scores_summary[model_name]:
             print(f"  Language: {lang}")
             for level in sorted(scores_summary[model_name][lang], key=lambda x: LEVEL_ORDER[lang][x]):
-                avg_scores = scores_summary[model_name][lang][level]
-                print(f"    Level: {level} | Avg Below Level Score: {avg_scores['avg_below_level_score']:.4f} | Avg Exact Level Score: {avg_scores['avg_exact_level_score']:.4f}")
+                stats = scores_summary[model_name][lang][level]
+                out_avg = stats.get("output")
+                orig_avg = stats.get("original")
+
+                if out_avg is not None:
+                    print(
+                        f"    Level: {level} | Output Avg Below: {out_avg['avg_below_level_score']:.4f} | "
+                        f"Output Avg Exact: {out_avg['avg_exact_level_score']:.4f}"
+                    )
+                else:
+                    print(f"    Level: {level} | Output Avg Below: N/A | Output Avg Exact: N/A")
+
+                if orig_avg is not None:
+                    print(
+                        f"              | Original Avg Below: {orig_avg['avg_below_level_score']:.4f} | "
+                        f"Original Avg Exact: {orig_avg['avg_exact_level_score']:.4f}"
+                    )
+                else:
+                    print(f"              | Original Avg Below: N/A | Original Avg Exact: N/A")
 
 with open("results/llm_evaluation/vocab_level_stats.json", 'w', encoding='utf-8') as f:
     json.dump(scores_summary, f, ensure_ascii=False, indent=4)
