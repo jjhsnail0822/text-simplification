@@ -7,9 +7,9 @@ set -euo pipefail
 mkdir -p logs
 
 export MODEL_ID="Qwen/Qwen3-4B-Instruct-2507"
-export EVALUATOR_MODEL_ID="Qwen/Qwen3-4B-Instruct-2507"
+export EVALUATOR_MODEL_ID="Qwen/Qwen3-14B"
 
-export OUTPUT_DIR="results/grpo/Qwen3-4B-Instruct-2507-GRPO-4B"
+export OUTPUT_DIR="results/grpo/Qwen3-4B-Instruct-2507-GRPO-14B"
 
 export USE_EVAL_VLLM=1
 export VLLM_BATCH_INVARIANT=1
@@ -33,6 +33,6 @@ done
 export CUDA_VISIBLE_DEVICES=1,2,3
 
 echo "Starting training..."
-accelerate launch --num_processes 3 src/train_grpo_big.py
+accelerate launch --num_processes 3 src/experiments/train_grpo.py
 
 wait $VLLM_PID

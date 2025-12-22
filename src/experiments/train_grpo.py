@@ -145,12 +145,26 @@ class RewardFunctionContainer:
         return disallowed_chars / total_chars
     
     def reward_text_coherence(self, completions, **kwargs):
+        # prompt = (
+        #     "Rate the naturalness and fluency of the given {language} text on a scale from 0 to 10. "
+        #     "The text should flow naturally like it was written by a native speaker. "
+        #     "Penalize awkward or repetitive phrasing, or unnatural word choices. "
+        #     "Answer with a single number (0-10) only, and say nothing else.\n\n"
+        #     "[TEXT]\n{text}"
+        # )
         prompt = (
-            "Rate the naturalness and fluency of the given {language} text on a scale from 0 to 10. "
-            "The text should flow naturally like it was written by a native speaker. "
-            "Penalize awkward or repetitive phrasing, or unnatural word choices. "
-            "Answer with a single number (0-10) only, and say nothing else.\n\n"
-            "[TEXT]\n{text}"
+            """You are evaluating {language} text quality. Rate the NATURALNESS of the [TEXT] strictly according to the following rules:
+
+10 = indistinguishable from a native human-written well-edited text
+7-9 = generally natural but contains minor unnatural phrasing
+4-6 = understandable but contains multiple awkward and unnatural expressions
+1-3 = sounds clearly machine-generated, frequently unnatural or repetitive
+0 = extremely incoherent or clearly broken language
+
+Output only a single integer from 0-10, and say nothing else.
+
+[TEXT]
+{text}"""
         )
         completion_contents = [completion[0]["content"] for completion in completions]
         langs = kwargs['language']
@@ -608,7 +622,7 @@ def main():
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
         # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         beta = 0.002,
-        reward_weights=[3.0, 1.0, 3.0],
+        reward_weights=[3.0, 1.0, 1.0, 3.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
         seed=42,
     )
@@ -619,7 +633,7 @@ def main():
         reward_funcs=[
             r.reward_vocab_level,
             # r.reward_unique_words,
-            # r.reward_bertscore,
+            r.reward_bertscore,
             r.reward_entailment,
             # r.reward_length_ratio,
             # r.reward_distinct_n,
