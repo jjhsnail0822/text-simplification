@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -q base_qos
 #SBATCH -p gigabyte_A6000
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:2
 
 set -euo pipefail
 mkdir -p logs
@@ -9,7 +9,7 @@ mkdir -p logs
 export MODEL_ID="Qwen/Qwen3-4B-Instruct-2507"
 export EVALUATOR_MODEL_ID="Qwen/Qwen3-14B"
 
-export OUTPUT_DIR="results/grpo/Qwen3-4B-Instruct-2507-GRPO-14B"
+export OUTPUT_DIR="results/fudge/Qwen3-4B-Instruct-2507-GRPO-14B"
 
 export USE_EVAL_VLLM=1
 export VLLM_BATCH_INVARIANT=1
@@ -30,9 +30,9 @@ until curl -sSf http://localhost:8008/health >/dev/null; do
   sleep 30
 done
 
-export CUDA_VISIBLE_DEVICES=1,2,3
+export CUDA_VISIBLE_DEVICES=1
 
 echo "Starting training..."
-accelerate launch --num_processes 3 src/experiments/fudge_eval.py
+accelerate launch --num_processes 1 src/experiments/fudge_eval.py
 
 wait $VLLM_PID
