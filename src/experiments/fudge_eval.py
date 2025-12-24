@@ -11,6 +11,8 @@ import random
 import numpy as np
 from openai import OpenAI, AsyncOpenAI
 import asyncio
+import tqdm
+import json
 
 def set_seed(seed):
     random.seed(seed)
@@ -83,7 +85,7 @@ class RewardFunctionContainer:
                     client.chat.completions.create(
                         model="evaluator",
                         messages=messages,
-                        max_tokens=2,
+                        max_tokens=3,
                         temperature=0.0,
                         extra_body={
                             "chat_template_kwargs": {"enable_thinking": False},
@@ -153,15 +155,17 @@ class RewardFunctionContainer:
         #     "[TEXT]\n{text}"
         # )
         prompt = (
-            """You are evaluating {language} text quality. Rate the NATURALNESS of the [TEXT] strictly according to the following rules:
+            """You are a strict native-speaker editor evaluating {language} text from a text simplification system.
+Count the number of distinct NATURALNESS errors in [TEXT]. If the same type of problem appears multiple times and each occurrence independently harms fluency, count each occurrence as a separate error.
 
-10 = indistinguishable from a native human-written well-edited text
-7-9 = generally natural but contains minor unnatural phrasing
-4-6 = understandable but contains multiple awkward and unnatural expressions
-1-3 = sounds clearly machine-generated, frequently unnatural or repetitive
-0 = extremely incoherent or clearly broken language
+Types of NATURALNESS errors include but are not limited to:
+- Repetition, templated framing, or filler usage.
+- Register or style inconsistency (e.g., mixed honorific level/tone).
+- Unnatural connectives, translationese word order, or clunky sentence structure.
+- Awkward word choice, collocation, particles, or endings.
+- Broken, ungrammatical, or hard-to-parse sentence.
 
-Output only a single integer from 0-10, and say nothing else.
+Output ONLY a single integer number of distinct NATURALNESS errors found in the following text, and say nothing else.
 
 [TEXT]
 {text}"""
@@ -189,12 +193,17 @@ Output only a single integer from 0-10, and say nothing else.
             all_texts.extend(["0"] * (len(all_messages) - len(all_texts)))
 
         rewards = []
-        for t in all_texts:
-            print("Cohernece",t)
+        for comp, lang, t in zip(completion_contents, langs, all_texts):
+            print("Coherence error counts", t)
             t = (t or "").strip().lower()
-            score = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
-            score = max(0, min(10, score))
-            rewards.append(score / 10.0)
+            penalty = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
+
+            n_sents = len(self.split_sentence(comp, lang)) if comp else 1
+            print("n_sents:", n_sents)
+
+            reward = max(0.0, 1.0 - (penalty / (n_sents * 5))) # assume 5 errors per sentence is the worst case
+            print("Coherence reward:", reward)
+            rewards.append(reward)
 
         return rewards
 
@@ -260,12 +269,32 @@ Output only a single integer from 0-10, and say nothing else.
             assert nli_tokenizer is not None and nli_model is not None and nli_device is not None
             assert entail_id is not None
 
-            out_bools = []
+            n = len(premises)
+            out_bools = [False] * n
+            
+            # Indices that need model prediction
+            todo_indices = []
+            todo_premises = []
+            todo_hypotheses = []
+
+            for i, (p, h) in enumerate(zip(premises, hypotheses)):
+                # Optimization: If premise and hypothesis are identical, it is entailment.
+                # This fixes the issue where NLI models predict "Neutral" for identical sentences.
+                if p.strip() == h.strip():
+                    out_bools[i] = True
+                else:
+                    todo_indices.append(i)
+                    todo_premises.append(p)
+                    todo_hypotheses.append(h)
+            
+            if not todo_premises:
+                return out_bools
+
             nli_model.eval()
             with torch.no_grad():
-                for start in range(0, len(premises), batch_size):
-                    p = premises[start : start + batch_size]
-                    h = hypotheses[start : start + batch_size]
+                for start in range(0, len(todo_premises), batch_size):
+                    p = todo_premises[start : start + batch_size]
+                    h = todo_hypotheses[start : start + batch_size]
                     enc = nli_tokenizer(
                         p,
                         h,
@@ -277,7 +306,12 @@ Output only a single integer from 0-10, and say nothing else.
                     enc = {k: v.to(nli_device) for k, v in enc.items()}
                     logits = nli_model(**enc).logits
                     pred = torch.argmax(logits, dim=-1)
-                    out_bools.extend((pred == entail_id).tolist())
+                    
+                    # Map back to original indices
+                    batch_bools = (pred == entail_id).tolist()
+                    for k, val in enumerate(batch_bools):
+                        original_idx = todo_indices[start + k]
+                        out_bools[original_idx] = val
             return out_bools
 
         completion_contents = [completion[0]["content"] for completion in completions]
@@ -590,7 +624,6 @@ def main():
     for lang in fudge_result.keys():
         if lang == 'size':continue
         for level in fudge_result[lang].keys():
-            eval_result[(lang,level)] = []
             avg_vocab_reward = 0
             avg_coherence_reward = 0
             avg_entailment_reward = 0
