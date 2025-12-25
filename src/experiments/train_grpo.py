@@ -153,28 +153,38 @@ class RewardFunctionContainer:
         #     "[TEXT]\n{text}"
         # )
         prompt = (
-            """You are a strict native-speaker editor evaluating {language} text from a text simplification system.
-Count the number of distinct NATURALNESS errors in [TEXT]. If the same type of problem appears multiple times and each occurrence independently harms fluency, count each occurrence as a separate error.
+            """You are evaluating {language} text quality for a text simplification system.
 
-Types of NATURALNESS errors include but are not limited to:
-- Repetition, templated framing, or filler usage.
-- Register or style inconsistency (e.g., mixed honorific level/tone).
-- Unnatural connectives, translationese word order, or clunky sentence structure.
-- Awkward word choice, collocation, particles, or endings.
-- Broken, ungrammatical, or hard-to-parse sentence.
+Given [ORIGINAL_TEXT] and [SIMPLIFIED_TEXT], focus ONLY on how natural and fluent the [SIMPLIFIED_TEXT] reads as a rewrite of the [ORIGINAL_TEXT]. Rate the NATURALNESS of the [SIMPLIFIED_TEXT] as if it were written by a native speaker, strictly according to the following rules:
 
-Output ONLY a single integer number of distinct NATURALNESS errors found in the following text, and say nothing else.
+100 = indistinguishable from a native human-written well-edited text
+80-99 = highly natural with only minor unnatural phrasing
+60-79 = generally understandable but contains multiple awkward and unnatural expressions
+30-59 = sounds clearly machine-generated, frequently unnatural or repetitive
+0-29 = extremely incoherent or clearly broken language
 
-[TEXT]
-{text}"""
+Critical penalties:
+- Strongly penalize repetitive template phrasing (e.g., repeating the same word/phrase many times to fill text).
+- Strongly penalize awkward connective phrases or unnatural sentence patterns.
+- Do NOT reward being 'simple' if it becomes unnatural. Simple but fully natural text should still receive a high score.
+
+Use the full 0–100 range. Reflect even small differences in naturalness with 1-point precision.
+Output only a single integer from 0 to 100, and say nothing else.
+
+[ORIGINAL_TEXT]
+{original_text}
+
+[SIMPLIFIED_TEXT]
+{simplified_text}"""
         )
         completion_contents = [completion[0]["content"] for completion in completions]
-        langs = kwargs['language']
+        references = self.prompts_to_references(kwargs["prompts"])
+        langs = kwargs["language"]
 
         all_messages = []
-        for i, comp in enumerate(completion_contents):
+        for i, (comp, ref) in enumerate(zip(completion_contents, references)):
             language = LANG_TO_LANGUAGE[langs[i]]
-            prompt_filled = prompt.format(language=language, text=comp)
+            prompt_filled = prompt.format(language=language, original_text=ref, simplified_text=comp)
             all_messages.append([{"role": "user", "content": prompt_filled}])
 
         # Chunk to avoid firing too many concurrent requests at once.
@@ -190,13 +200,11 @@ Output ONLY a single integer number of distinct NATURALNESS errors found in the 
             all_texts.extend(["0"] * (len(all_messages) - len(all_texts)))
 
         rewards = []
-        for comp, lang, t in zip(completion_contents, langs, all_texts):
+        for comp, t in zip(completion_contents, all_texts):
             t = (t or "").strip().lower()
-            penalty = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
+            reward = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
 
-            n_sents = len(self.split_sentence(comp, lang)) if comp else 1
-
-            reward = max(0.0, 1.0 - (penalty / (n_sents * 5))) # assume 5 errors per sentence is the worst case
+            reward = max(0, min(100, reward)) / 100.0  # normalize to [0, 1]
             rewards.append(reward)
 
         return rewards
@@ -652,7 +660,7 @@ def main():
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
         # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         beta = 0.002,
-        reward_weights=[3.0, 1.0, 1.0, 3.0],
+        reward_weights=[4.0, 1.0, 2.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
         seed=42,
     )
@@ -663,7 +671,7 @@ def main():
         reward_funcs=[
             r.reward_vocab_level,
             # r.reward_unique_words,
-            r.reward_bertscore,
+            # r.reward_bertscore,
             r.reward_entailment,
             # r.reward_length_ratio,
             # r.reward_distinct_n,

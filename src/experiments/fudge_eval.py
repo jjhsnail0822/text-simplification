@@ -155,28 +155,38 @@ class RewardFunctionContainer:
         #     "[TEXT]\n{text}"
         # )
         prompt = (
-            """You are a strict native-speaker editor evaluating {language} text from a text simplification system.
-Count the number of distinct NATURALNESS errors in [TEXT]. If the same type of problem appears multiple times and each occurrence independently harms fluency, count each occurrence as a separate error.
+            """You are evaluating {language} text quality for a text simplification system.
 
-Types of NATURALNESS errors include but are not limited to:
-- Repetition, templated framing, or filler usage.
-- Register or style inconsistency (e.g., mixed honorific level/tone).
-- Unnatural connectives, translationese word order, or clunky sentence structure.
-- Awkward word choice, collocation, particles, or endings.
-- Broken, ungrammatical, or hard-to-parse sentence.
+Given [ORIGINAL_TEXT] and [SIMPLIFIED_TEXT], focus ONLY on how natural and fluent the [SIMPLIFIED_TEXT] reads as a rewrite of the [ORIGINAL_TEXT]. Rate the NATURALNESS of the [SIMPLIFIED_TEXT] as if it were written by a native speaker, strictly according to the following rules:
 
-Output ONLY a single integer number of distinct NATURALNESS errors found in the following text, and say nothing else.
+100 = indistinguishable from a native human-written well-edited text
+80-99 = highly natural with only minor unnatural phrasing
+60-79 = generally understandable but contains multiple awkward and unnatural expressions
+30-59 = sounds clearly machine-generated, frequently unnatural or repetitive
+0-29 = extremely incoherent or clearly broken language
 
-[TEXT]
-{text}"""
+Critical penalties:
+- Strongly penalize repetitive template phrasing (e.g., repeating the same word/phrase many times to fill text).
+- Strongly penalize awkward connective phrases or unnatural sentence patterns.
+- Do NOT reward being 'simple' if it becomes unnatural. Simple but fully natural text should still receive a high score.
+
+Use the full 0–100 range. Reflect even small differences in naturalness with 1-point precision.
+Output only a single integer from 0 to 100, and say nothing else.
+
+[ORIGINAL_TEXT]
+{original_text}
+
+[SIMPLIFIED_TEXT]
+{simplified_text}"""
         )
         completion_contents = [completion[0]["content"] for completion in completions]
-        langs = kwargs['language']
+        references = self.prompts_to_references(kwargs["prompts"])
+        langs = kwargs["language"]
 
         all_messages = []
-        for i, comp in enumerate(completion_contents):
+        for i, (comp, ref) in enumerate(zip(completion_contents, references)):
             language = LANG_TO_LANGUAGE[langs[i]]
-            prompt_filled = prompt.format(language=language, text=comp)
+            prompt_filled = prompt.format(language=language, original_text=ref, simplified_text=comp)
             print(prompt_filled)
             all_messages.append([{"role": "user", "content": prompt_filled}])
 
@@ -193,16 +203,12 @@ Output ONLY a single integer number of distinct NATURALNESS errors found in the 
             all_texts.extend(["0"] * (len(all_messages) - len(all_texts)))
 
         rewards = []
-        for comp, lang, t in zip(completion_contents, langs, all_texts):
-            print("Coherence error counts", t)
+        for comp, t in zip(completion_contents, all_texts):
+            print("Coherence", t)
             t = (t or "").strip().lower()
-            penalty = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
+            reward = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
 
-            n_sents = len(self.split_sentence(comp, lang)) if comp else 1
-            print("n_sents:", n_sents)
-
-            reward = max(0.0, 1.0 - (penalty / (n_sents * 5))) # assume 5 errors per sentence is the worst case
-            print("Coherence reward:", reward)
+            reward = max(0, min(100, reward)) / 100.0  # normalize to [0, 1]
             rewards.append(reward)
 
         return rewards
@@ -634,7 +640,7 @@ def main():
                 original = [[{'content':text['original_text']}]] 
                 simplified = [[{'content':text['simplified_text']}]]
                 vocab_reward = r.reward_vocab_level(simplified,language=[lang],level=[level])
-                coherence_reward = r.reward_text_coherence(simplified,language=[lang])
+                coherence_reward = r.reward_text_coherence(simplified,language=[lang],prompts=original)
                 entailment_reward = r.reward_entailment(simplified,language=[lang],prompts=original)
                 fudge_result[lang][level][i]['vocab_reward'] = vocab_reward
                 fudge_result[lang][level][i]['coherence_reward'] = coherence_reward
