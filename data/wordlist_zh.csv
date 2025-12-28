@@ -17,7 +17,6 @@ Word,Level
 一再,HSK4
 一切,HSK3
 一刹那,HSK7-9
-一动不动,HSK7-9
 一半,HSK1
 一卡通,HSK7-9
 一口气,HSK5
@@ -25,7 +24,6 @@ Word,Level
 一同,HSK6
 一向,HSK5
 一味,HSK7-9
-一回事,HSK7-9
 一块儿,HSK1
 一塌糊涂,HSK7-9
 一声不吭,HSK7-9
@@ -56,7 +54,6 @@ Word,Level
 一旦,HSK5
 一早,HSK7-9
 一时,HSK6
-一晃,HSK7-9
 一样,HSK1
 一概,HSK7-9
 一概而论,HSK7-9
@@ -84,10 +81,7 @@ Word,Level
 一言不发,HSK7-9
 一贯,HSK6
 一起,HSK1
-一路,HSK5
-一路上,HSK6
-一路平安,HSK2
-一路顺风,HSK2
+一路,HSK2
 一身,HSK5
 一辈子,HSK5
 一边,HSK1
@@ -95,7 +89,6 @@ Word,Level
 一连串,HSK7-9
 一道,HSK6
 一部分,HSK2
-一锅粥,HSK7-9
 一长一短,HSK7-9
 一阵,HSK7-9
 一面,HSK7-9
@@ -108,7 +101,7 @@ Word,Level
 万一,HSK4
 万万,HSK7-9
 万分,HSK7-9
-万古长青,HSK7-9
+万古,HSK7-9
 万无一失,HSK7-9
 万能,HSK7-9
 丈夫,HSK4
@@ -164,7 +157,6 @@ Word,Level
 上面,HSK3
 下,HSK1
 下一代,HSK7-9
-下个月,HSK4
 下乡,HSK7-9
 下令,HSK7-9
 下决心,HSK7-9
@@ -203,37 +195,31 @@ Word,Level
 下面,HSK3
 不,HSK1
 不一会儿,HSK2
-不一定,HSK2
 不为人知,HSK7-9
 不久,HSK2
 不了了之,HSK7-9
 不予,HSK7-9
-不亚于,HSK7-9
 不亦乐乎,HSK7-9
 不仅,HSK3
 不仅仅,HSK6
 不以为然,HSK7-9
 不但,HSK2
+不住,HSK5
 不便,HSK6
-不值,HSK6
 不假思索,HSK7-9
 不停,HSK5
-不像话,HSK7-9
 不光,HSK3
 不免,HSK5
-不再,HSK6
 不准,HSK7-9
 不利,HSK5
 不利于,HSK7-9
 不可思议,HSK7-9
 不可避免,HSK7-9
 不同,HSK2
-不同寻常,HSK7-9
 不在乎,HSK4
 不堪,HSK7-9
 不够,HSK2
 不大,HSK1
-不太,HSK2
 不好意思,HSK2
 不如,HSK2
 不如说,HSK7-9
@@ -241,7 +227,6 @@ Word,Level
 不安,HSK3
 不定,HSK7-9
 不宜,HSK7-9
-不客气,HSK1
 不容,HSK7-9
 不对,HSK1
 不少,HSK2
@@ -255,7 +240,6 @@ Word,Level
 不得而知,HSK7-9
 不必,HSK3
 不怎么,HSK6
-不怎么样,HSK6
 不惜,HSK7-9
 不慎,HSK7-9
 不懈,HSK7-9
@@ -265,10 +249,10 @@ Word,Level
 不断,HSK3
 不时,HSK5
 不易,HSK5
+不是,HSK1
 不景气,HSK7-9
 不曾,HSK5
 不服,HSK7-9
-不服气,HSK7-9
 不止,HSK5
 不正之风,HSK7-9
 不满,HSK2
@@ -282,14 +266,12 @@ Word,Level
 不知,HSK7-9
 不知不觉,HSK7-9
 不禁,HSK6
-不算,HSK7-9
 不管,HSK4
 不约而同,HSK7-9
 不经意,HSK7-9
 不翼而飞,HSK7-9
 不耐烦,HSK5
 不耻下问,HSK7-9
-不肯,HSK7-9
 不能不,HSK5
 不至于,HSK6
 不良,HSK5
@@ -405,8 +387,7 @@ Word,Level
 中介,HSK4
 中医,HSK2
 中午,HSK1
-中华,HSK6
-中华民族,HSK3
+中华,HSK3
 中国,HSK1
 中国画,HSK7-9
 中型,HSK7-9
@@ -491,9 +472,9 @@ Word,Level
 主食,HSK7-9
 举,HSK2
 举一反三,HSK7-9
+举世,HSK7-9
 举世无双,HSK7-9
 举世瞩目,HSK7-9
-举世闻名,HSK7-9
 举例,HSK7-9
 举办,HSK3
 举动,HSK5
@@ -510,7 +491,7 @@ Word,Level
 久违,HSK7-9
 义务,HSK4
 义工,HSK7-9
-之,HSK7-9
+之,HSK4
 之一,HSK4
 之下,HSK5
 之中,HSK5
@@ -568,7 +549,6 @@ Word,Level
 书记,HSK7-9
 书面,HSK7-9
 买,HSK1
-买不起,HSK7-9
 买卖,HSK5
 乱,HSK3
 乱七八糟,HSK7-9
@@ -630,6 +610,7 @@ Word,Level
 五花八门,HSK7-9
 五颜六色,HSK4
 井,HSK6
+亚于,HSK7-9
 亚军,HSK5
 亚运会,HSK4
 些,HSK4
@@ -657,6 +638,7 @@ Word,Level
 交费,HSK3
 交通,HSK2
 交锋,HSK7-9
+交错,HSK7-9
 交际,HSK4
 交集,HSK7-9
 亦,HSK7-9
@@ -708,7 +690,7 @@ Word,Level
 人士,HSK5
 人家,HSK4
 人工,HSK3
-人工智能,HSK7-9
+人心,HSK7-9
 人性,HSK7-9
 人情,HSK7-9
 人手,HSK7-9
@@ -768,7 +750,6 @@ Word,Level
 从早到晚,HSK7-9
 从未,HSK7-9
 从来,HSK3
-从来不,HSK7-9
 从此,HSK4
 从没,HSK6
 从而,HSK5
@@ -1055,7 +1036,6 @@ Word,Level
 便利店,HSK7-9
 便宜,HSK2
 便捷,HSK7-9
-便是,HSK6
 便条,HSK5
 便道,HSK7-9
 便饭,HSK7-9
@@ -1337,9 +1317,7 @@ Word,Level
 公仆,HSK7-9
 公众,HSK6
 公元,HSK4
-公共,HSK3
-公共场所,HSK7-9
-公共汽车,HSK2
+公共,HSK2
 公关,HSK7-9
 公函,HSK7-9
 公务,HSK7-9
@@ -1383,6 +1361,7 @@ Word,Level
 共享,HSK5
 共同,HSK3
 共同体,HSK7-9
+共处,HSK7-9
 共性,HSK7-9
 共有,HSK3
 共计,HSK5
@@ -1461,7 +1440,6 @@ Word,Level
 册,HSK5
 再,HSK1
 再三,HSK4
-再也,HSK5
 再度,HSK7-9
 再次,HSK5
 再现,HSK7-9
@@ -1510,7 +1488,7 @@ Word,Level
 冲洗,HSK7-9
 冲浪,HSK7-9
 冲突,HSK5
-决不,HSK5
+决,HSK5
 决定,HSK3
 决心,HSK3
 决策,HSK6
@@ -1527,7 +1505,6 @@ Word,Level
 冷笑,HSK7-9
 冷落,HSK7-9
 冷酷,HSK7-9
-冷酷无情,HSK7-9
 冷门,HSK7-9
 冷静,HSK4
 冻,HSK5
@@ -1583,7 +1560,6 @@ Word,Level
 凹,HSK7-9
 出,HSK1
 出丑,HSK7-9
-出主意,HSK7-9
 出事,HSK6
 出于,HSK5
 出人意料,HSK7-9
@@ -1616,7 +1592,7 @@ Word,Level
 出来,HSK1
 出毛病,HSK7-9
 出汗,HSK5
-出洋相,HSK7-9
+出洋,HSK7-9
 出游,HSK7-9
 出演,HSK7-9
 出版,HSK5
@@ -1647,7 +1623,6 @@ Word,Level
 刁难,HSK7-9
 分,HSK1
 分为,HSK4
-分之,HSK4
 分享,HSK5
 分别,HSK3
 分割,HSK7-9
@@ -1743,11 +1718,9 @@ Word,Level
 别具匠心,HSK7-9
 别墅,HSK7-9
 别扭,HSK7-9
-别提了,HSK7-9
+别提,HSK7-9
 别的,HSK1
-别看,HSK7-9
 别致,HSK7-9
-别说,HSK7-9
 刮,HSK6
 刮风,HSK7-9
 到,HSK1
@@ -1853,7 +1826,6 @@ Word,Level
 劝说,HSK7-9
 劝阻,HSK7-9
 办,HSK2
-办不到,HSK7-9
 办事,HSK4
 办事处,HSK6
 办公,HSK6
@@ -1923,6 +1895,7 @@ Word,Level
 劫,HSK7-9
 劫持,HSK7-9
 励志,HSK7-9
+劲儿,HSK4
 劲头,HSK7-9
 劳务,HSK7-9
 劳动,HSK5
@@ -2031,6 +2004,7 @@ Word,Level
 华语,HSK5
 协会,HSK6
 协作,HSK7-9
+协力,HSK7-9
 协助,HSK6
 协同,HSK7-9
 协商,HSK6
@@ -2101,7 +2075,6 @@ Word,Level
 即可,HSK7-9
 即将,HSK4
 却,HSK4
-却是,HSK6
 卵,HSK7-9
 卷,HSK4
 卷入,HSK7-9
@@ -2139,6 +2112,7 @@ Word,Level
 原则,HSK4
 原创,HSK7-9
 原告,HSK6
+原味,HSK7-9
 原因,HSK2
 原地,HSK7-9
 原型,HSK7-9
@@ -2148,7 +2122,7 @@ Word,Level
 原本,HSK7-9
 原材料,HSK7-9
 原来,HSK2
-原汁原味,HSK7-9
+原汁,HSK7-9
 原理,HSK5
 原装,HSK7-9
 原谅,HSK6
@@ -2289,7 +2263,6 @@ Word,Level
 受益,HSK7-9
 受苦,HSK7-9
 受贿,HSK7-9
-受过,HSK7-9
 受骗,HSK7-9
 变,HSK2
 变为,HSK3
@@ -2310,7 +2283,6 @@ Word,Level
 口,HSK1
 口令,HSK7-9
 口号,HSK5
-口吃,HSK7-9
 口味,HSK7-9
 口哨,HSK7-9
 口头,HSK7-9
@@ -2330,7 +2302,7 @@ Word,Level
 口香糖,HSK7-9
 古,HSK3
 古人,HSK7-9
-古今中外,HSK7-9
+古今,HSK7-9
 古代,HSK3
 古典,HSK6
 古怪,HSK7-9
@@ -2362,7 +2334,7 @@ Word,Level
 召集,HSK7-9
 叮嘱,HSK7-9
 可,HSK5
-可不是,HSK7-9
+可不,HSK7-9
 可乐,HSK3
 可乘之机,HSK7-9
 可以,HSK2
@@ -2409,7 +2381,6 @@ Word,Level
 叹气,HSK6
 叼,HSK7-9
 吃,HSK1
-吃不上,HSK7-9
 吃亏,HSK7-9
 吃力,HSK5
 吃喝玩乐,HSK7-9
@@ -2568,7 +2539,6 @@ Word,Level
 吸管,HSK4
 吸纳,HSK7-9
 吹,HSK2
-吹了,HSK7-9
 吹捧,HSK7-9
 吹牛,HSK7-9
 吻,HSK7-9
@@ -2620,7 +2590,6 @@ Word,Level
 和,HSK1
 和尚,HSK7-9
 和平,HSK3
-和平共处,HSK7-9
 和气,HSK7-9
 和睦,HSK7-9
 和蔼,HSK7-9
@@ -2668,7 +2637,6 @@ Word,Level
 哪些,HSK1
 哪儿,HSK1
 哪怕,HSK4
-哪知道,HSK7-9
 哪里,HSK1
 哭,HSK2
 哭泣,HSK7-9
@@ -2926,7 +2894,6 @@ Word,Level
 坚实,HSK7-9
 坚强,HSK3
 坚持,HSK3
-坚持不懈,HSK7-9
 坚硬,HSK7-9
 坚韧,HSK7-9
 坛,HSK7-9
@@ -3114,10 +3081,8 @@ Word,Level
 多媒体,HSK6
 多少,HSK1
 多年,HSK4
-多年来,HSK7-9
 多心,HSK7-9
 多数,HSK2
-多方面,HSK6
 多样,HSK4
 多次,HSK4
 多种,HSK4
@@ -3174,10 +3139,10 @@ Word,Level
 大巴,HSK4
 大师,HSK6
 大幅度,HSK7-9
+大悟,HSK7-9
 大惊小怪,HSK7-9
 大意,HSK7-9
 大批,HSK6
-大数据,HSK7-9
 大方,HSK4
 大有可为,HSK7-9
 大棚,HSK7-9
@@ -3375,7 +3340,6 @@ Word,Level
 好转,HSK6
 好运,HSK5
 如,HSK6
-如一,HSK6
 如下,HSK5
 如今,HSK4
 如何,HSK3
@@ -3595,7 +3559,7 @@ Word,Level
 实现,HSK2
 实用,HSK4
 实行,HSK3
-实话,HSK7-9
+实话,HSK6
 实话实说,HSK7-9
 实质,HSK7-9
 实践,HSK6
@@ -3619,7 +3583,7 @@ Word,Level
 客户,HSK5
 客房,HSK7-9
 客机,HSK7-9
-客气,HSK5
+客气,HSK1
 客流,HSK7-9
 客观,HSK3
 客车,HSK6
@@ -3654,7 +3618,7 @@ Word,Level
 家喻户晓,HSK7-9
 家园,HSK6
 家境,HSK7-9
-家家户户,HSK7-9
+家家,HSK7-9
 家属,HSK3
 家庭,HSK2
 家政,HSK7-9
@@ -3982,7 +3946,6 @@ Word,Level
 市,HSK2
 市区,HSK4
 市场,HSK3
-市场经济,HSK7-9
 市民,HSK6
 市长,HSK2
 布,HSK3
@@ -4205,7 +4168,7 @@ Word,Level
 开场,HSK7-9
 开场白,HSK7-9
 开垦,HSK7-9
-开夜车,HSK6
+开夜,HSK6
 开天辟地,HSK7-9
 开头,HSK6
 开始,HSK3
@@ -4296,7 +4259,7 @@ Word,Level
 归宿,HSK7-9
 归属,HSK7-9
 归来,HSK7-9
-归根到底,HSK7-9
+归根,HSK7-9
 归纳,HSK7-9
 归结,HSK7-9
 归还,HSK7-9
@@ -4384,7 +4347,6 @@ Word,Level
 徒步,HSK7-9
 得,HSK2
 得不偿失,HSK7-9
-得了,HSK5
 得以,HSK5
 得体,HSK7-9
 得出,HSK2
@@ -4395,7 +4357,6 @@ Word,Level
 得失,HSK7-9
 得当,HSK7-9
 得意,HSK4
-得意扬扬,HSK7-9
 得手,HSK7-9
 得益于,HSK7-9
 得知,HSK7-9
@@ -4456,7 +4417,6 @@ Word,Level
 忌口,HSK7-9
 忌讳,HSK7-9
 忍,HSK5
-忍不住,HSK5
 忍受,HSK5
 忍心,HSK7-9
 忍耐,HSK7-9
@@ -4465,7 +4425,6 @@ Word,Level
 志愿者,HSK3
 志气,HSK7-9
 忘,HSK1
-忘不了,HSK7-9
 忘掉,HSK7-9
 忘记,HSK1
 忙,HSK1
@@ -4494,11 +4453,12 @@ Word,Level
 念书,HSK7-9
 念头,HSK7-9
 念念不忘,HSK7-9
+忽低,HSK7-9
 忽悠,HSK7-9
 忽然,HSK2
 忽略,HSK6
 忽视,HSK4
-忽高忽低,HSK7-9
+忽高,HSK7-9
 怀孕,HSK7-9
 怀念,HSK4
 怀抱,HSK7-9
@@ -4570,7 +4530,7 @@ Word,Level
 总额,HSK7-9
 恋恋不舍,HSK7-9
 恋爱,HSK5
-恍然大悟,HSK7-9
+恍然,HSK7-9
 恐吓,HSK7-9
 恐怕,HSK3
 恐怖,HSK7-9
@@ -4594,7 +4554,6 @@ Word,Level
 恰巧,HSK7-9
 恰当,HSK6
 恰恰,HSK6
-恰恰相反,HSK7-9
 恳求,HSK7-9
 恶,HSK7-9
 恶劣,HSK7-9
@@ -4668,7 +4627,6 @@ Word,Level
 惯例,HSK7-9
 惯性,HSK7-9
 想,HSK1
-想不到,HSK6
 想到,HSK2
 想念,HSK4
 想方设法,HSK7-9
@@ -4692,7 +4650,6 @@ Word,Level
 意想不到,HSK6
 意愿,HSK6
 意料,HSK7-9
-意料之外,HSK7-9
 意见,HSK2
 意识,HSK5
 愚公移山,HSK7-9
@@ -4771,7 +4728,6 @@ Word,Level
 成群结队,HSK7-9
 成语,HSK5
 成长,HSK3
-成问题,HSK7-9
 我,HSK1
 我们,HSK1
 戒,HSK5
@@ -4793,12 +4749,13 @@ Word,Level
 战胜,HSK4
 截,HSK7-9
 截止,HSK6
-截然不同,HSK7-9
+截然,HSK7-9
 截至,HSK6
 戳,HSK7-9
 戴,HSK4
 户,HSK4
 户外,HSK6
+户户,HSK7-9
 房东,HSK3
 房价,HSK6
 房地产,HSK7-9
@@ -4916,6 +4873,7 @@ Word,Level
 扫描,HSK7-9
 扫除,HSK7-9
 扬,HSK7-9
+扬扬,HSK7-9
 扭,HSK6
 扭头,HSK7-9
 扭曲,HSK7-9
@@ -5163,7 +5121,6 @@ Word,Level
 指标,HSK5
 指点,HSK7-9
 指甲,HSK5
-指着,HSK6
 指示,HSK5
 指责,HSK5
 按,HSK3
@@ -5203,7 +5160,6 @@ Word,Level
 振动,HSK5
 振奋,HSK7-9
 挺,HSK2
-挺好,HSK2
 挽,HSK7-9
 挽回,HSK7-9
 挽救,HSK7-9
@@ -5504,7 +5460,6 @@ Word,Level
 改造,HSK3
 改邪归正,HSK7-9
 改革,HSK5
-改革开放,HSK7-9
 攻,HSK7-9
 攻关,HSK7-9
 攻击,HSK6
@@ -5598,7 +5553,7 @@ Word,Level
 数额,HSK7-9
 敲,HSK5
 敲诈,HSK7-9
-敲边鼓,HSK7-9
+敲边,HSK7-9
 敲门,HSK5
 整,HSK3
 整个,HSK3
@@ -5789,7 +5744,7 @@ Word,Level
 时候,HSK1
 时光,HSK5
 时刻,HSK3
-时好时坏,HSK7-9
+时好,HSK7-9
 时尚,HSK7-9
 时常,HSK5
 时时,HSK6
@@ -5839,7 +5794,6 @@ Word,Level
 春节,HSK2
 昨天,HSK1
 是,HSK1
-是不是,HSK1
 是否,HSK4
 是非,HSK7-9
 昼夜,HSK7-9
@@ -5912,8 +5866,8 @@ Word,Level
 暴躁,HSK7-9
 暴雨,HSK6
 暴露,HSK6
+暴风,HSK7-9
 暴风雨,HSK6
-暴风骤雨,HSK7-9
 曙光,HSK7-9
 曝光,HSK7-9
 曰,HSK7-9
@@ -5925,7 +5879,6 @@ Word,Level
 更换,HSK5
 更改,HSK7-9
 更新,HSK5
-更是,HSK6
 更衣室,HSK7-9
 曾,HSK4
 曾经,HSK3
@@ -5958,7 +5911,6 @@ Word,Level
 有利于,HSK5
 有力,HSK5
 有助于,HSK7-9
-有劲儿,HSK4
 有口无心,HSK7-9
 有名,HSK1
 有声有色,HSK7-9
@@ -5969,7 +5921,6 @@ Word,Level
 有意,HSK7-9
 有意思,HSK2
 有所,HSK7-9
-有所不同,HSK7-9
 有效,HSK3
 有效期,HSK7-9
 有时,HSK1
@@ -5978,7 +5929,6 @@ Word,Level
 有朝一日,HSK7-9
 有机,HSK7-9
 有毒,HSK5
-有没有,HSK6
 有点儿,HSK2
 有用,HSK1
 有的,HSK1
@@ -5986,7 +5936,6 @@ Word,Level
 有的是,HSK3
 有益,HSK7-9
 有着,HSK5
-有空儿,HSK2
 有趣,HSK4
 有限,HSK4
 朋友,HSK1
@@ -5994,6 +5943,7 @@ Word,Level
 服从,HSK5
 服务,HSK2
 服务器,HSK7-9
+服气,HSK7-9
 服用,HSK7-9
 服装,HSK3
 服饰,HSK7-9
@@ -6005,7 +5955,7 @@ Word,Level
 朝,HSK3
 朝三暮四,HSK7-9
 朝代,HSK7-9
-朝夕相处,HSK7-9
+朝夕,HSK7-9
 朝气蓬勃,HSK7-9
 朝着,HSK7-9
 期,HSK3
@@ -6371,7 +6321,6 @@ Word,Level
 此外,HSK4
 此时,HSK5
 此次,HSK6
-此致,HSK6
 此起彼伏,HSK7-9
 步,HSK3
 步伐,HSK7-9
@@ -6441,7 +6390,6 @@ Word,Level
 毛笔,HSK5
 毛衣,HSK4
 毫不,HSK7-9
-毫不犹豫,HSK7-9
 毫升,HSK4
 毫无,HSK7-9
 毫米,HSK4
@@ -6551,7 +6499,7 @@ Word,Level
 沉闷,HSK7-9
 沉默,HSK4
 沏,HSK7-9
-沐浴露,HSK7-9
+沐,HSK7-9
 沙发,HSK3
 沙子,HSK3
 沙滩,HSK7-9
@@ -6561,12 +6509,10 @@ Word,Level
 沟通,HSK5
 没,HSK1
 没事儿,HSK1
-没什么,HSK1
 没关系,HSK1
 没准儿,HSK7-9
 没劲,HSK7-9
 没完没了,HSK7-9
-没想到,HSK4
 没意思,HSK7-9
 没收,HSK6
 没有,HSK1
@@ -6718,6 +6664,7 @@ Word,Level
 浮现,HSK7-9
 浮躁,HSK7-9
 浴室,HSK7-9
+浴露,HSK7-9
 海,HSK2
 海关,HSK3
 海内外,HSK7-9
@@ -6786,7 +6733,6 @@ Word,Level
 深,HSK3
 深信,HSK7-9
 深入,HSK3
-深入人心,HSK7-9
 深切,HSK7-9
 深刻,HSK3
 深化,HSK6
@@ -7121,7 +7067,6 @@ Word,Level
 爱惜,HSK7-9
 爱护,HSK4
 爱理不理,HSK7-9
-爱面子,HSK7-9
 爵士,HSK7-9
 父亲,HSK3
 父女,HSK6
@@ -7357,18 +7302,15 @@ Word,Level
 生词,HSK2
 生长,HSK3
 用,HSK1
-用不着,HSK5
 用于,HSK5
 用人,HSK7-9
 用力,HSK7-9
 用功,HSK7-9
 用品,HSK6
 用处,HSK6
-用得着,HSK6
 用心,HSK6
 用意,HSK7-9
 用户,HSK5
-用来,HSK5
 用法,HSK6
 用途,HSK4
 用餐,HSK7-9
@@ -7394,8 +7336,8 @@ Word,Level
 电动车,HSK4
 电台,HSK3
 电器,HSK6
+电子,HSK3
 电子版,HSK5
-电子邮件,HSK3
 电影,HSK1
 电影院,HSK1
 电报,HSK7-9
@@ -7414,7 +7356,7 @@ Word,Level
 电话,HSK1
 电车,HSK6
 电铃,HSK7-9
-电饭锅,HSK5
+电饭,HSK5
 男,HSK1
 男人,HSK1
 男士,HSK4
@@ -7596,6 +7538,7 @@ Word,Level
 直视,HSK7-9
 直觉,HSK7-9
 直达,HSK7-9
+相,HSK7-9
 相互,HSK3
 相传,HSK7-9
 相伴,HSK7-9
@@ -7616,7 +7559,6 @@ Word,Level
 相提并论,HSK7-9
 相机,HSK2
 相比,HSK3
-相比之下,HSK7-9
 相片,HSK4
 相等,HSK5
 相约,HSK7-9
@@ -7625,6 +7567,7 @@ Word,Level
 相辅相成,HSK7-9
 相连,HSK7-9
 相通,HSK7-9
+相逢,HSK7-9
 相遇,HSK7-9
 盼,HSK7-9
 盼望,HSK6
@@ -7645,8 +7588,6 @@ Word,Level
 看台,HSK7-9
 看好,HSK6
 看待,HSK5
-看得出,HSK7-9
-看得见,HSK6
 看得起,HSK6
 看成,HSK5
 看护,HSK7-9
@@ -7666,7 +7607,7 @@ Word,Level
 真心,HSK7-9
 真情,HSK7-9
 真挚,HSK7-9
-真是的,HSK7-9
+真是,HSK7-9
 真正,HSK2
 真理,HSK5
 真的,HSK1
@@ -7695,14 +7636,12 @@ Word,Level
 着手,HSK7-9
 着火,HSK4
 着眼,HSK7-9
-着眼于,HSK7-9
 着落,HSK7-9
 着迷,HSK7-9
 着重,HSK7-9
 睁,HSK7-9
 睡,HSK1
 睡眠,HSK5
-睡着,HSK4
 睡袋,HSK7-9
 睡觉,HSK1
 督促,HSK7-9
@@ -7791,7 +7730,6 @@ Word,Level
 碰巧,HSK7-9
 碰撞,HSK7-9
 碰见,HSK2
-碰钉子,HSK7-9
 碳,HSK7-9
 磁卡,HSK7-9
 磁带,HSK7-9
@@ -7861,7 +7799,6 @@ Word,Level
 福利,HSK5
 福气,HSK7-9
 离,HSK2
-离不开,HSK4
 离奇,HSK7-9
 离婚,HSK3
 离开,HSK2
@@ -7954,7 +7891,7 @@ Word,Level
 穷人,HSK4
 空,HSK3
 空中,HSK5
-空儿,HSK3
+空儿,HSK2
 空军,HSK6
 空前,HSK7-9
 空地,HSK7-9
@@ -8130,7 +8067,6 @@ Word,Level
 粒,HSK7-9
 粗,HSK4
 粗心,HSK4
-粗心大意,HSK7-9
 粗暴,HSK7-9
 粗略,HSK7-9
 粗糙,HSK7-9
@@ -8237,7 +8173,7 @@ Word,Level
 纪念馆,HSK7-9
 纬度,HSK7-9
 纯,HSK4
-纯净水,HSK4
+纯净,HSK4
 纯朴,HSK7-9
 纯洁,HSK7-9
 纯粹,HSK7-9
@@ -8249,12 +8185,13 @@ Word,Level
 纳税人,HSK7-9
 纳闷儿,HSK7-9
 纵容,HSK7-9
-纵横交错,HSK7-9
+纵横,HSK7-9
 纵深,HSK7-9
 纵然,HSK7-9
 纵观,HSK7-9
 纷纷,HSK4
 纸,HSK2
+纸术,HSK7-9
 纺织,HSK7-9
 纽带,HSK7-9
 纽扣,HSK7-9
@@ -8430,6 +8367,7 @@ Word,Level
 罪犯,HSK7-9
 罪魁祸首,HSK7-9
 置,HSK7-9
+置信,HSK7-9
 羊,HSK3
 美,HSK3
 美中不足,HSK7-9
@@ -8479,7 +8417,6 @@ Word,Level
 老婆,HSK4
 老字号,HSK7-9
 老实,HSK4
-老实说,HSK7-9
 老家,HSK4
 老师,HSK1
 老年,HSK2
@@ -8519,7 +8456,7 @@ Word,Level
 耳机,HSK4
 耳熟能详,HSK7-9
 耳目一新,HSK7-9
-耳闻目睹,HSK7-9
+耳闻,HSK7-9
 耸立,HSK7-9
 耻笑,HSK7-9
 耻辱,HSK7-9
@@ -8629,7 +8566,6 @@ Word,Level
 胸膛,HSK7-9
 胸部,HSK4
 能,HSK1
-能不能,HSK3
 能人,HSK7-9
 能力,HSK3
 能否,HSK6
@@ -8714,7 +8650,6 @@ Word,Level
 自然而然,HSK7-9
 自理,HSK7-9
 自由,HSK2
-自由自在,HSK7-9
 自相矛盾,HSK7-9
 自私,HSK7-9
 自私自利,HSK7-9
@@ -8736,7 +8671,7 @@ Word,Level
 至关重要,HSK7-9
 至少,HSK3
 至此,HSK7-9
-致,HSK7-9
+致,HSK6
 致使,HSK7-9
 致力于,HSK7-9
 致命,HSK7-9
@@ -8778,7 +8713,6 @@ Word,Level
 良性,HSK7-9
 艰巨,HSK7-9
 艰苦,HSK5
-艰苦奋斗,HSK7-9
 艰辛,HSK7-9
 艰险,HSK7-9
 艰难,HSK5
@@ -8891,7 +8825,7 @@ Word,Level
 菩萨,HSK7-9
 萌发,HSK7-9
 萌芽,HSK7-9
-萍水相逢,HSK7-9
+萍水,HSK7-9
 萎缩,HSK7-9
 萝卜,HSK7-9
 营业,HSK4
@@ -9033,7 +8967,6 @@ Word,Level
 表达,HSK3
 表述,HSK7-9
 表面,HSK3
-表面上,HSK6
 衬托,HSK7-9
 衬衣,HSK3
 衬衫,HSK3
@@ -9109,7 +9042,6 @@ Word,Level
 见解,HSK7-9
 见证,HSK7-9
 见识,HSK7-9
-见过,HSK2
 见钱眼开,HSK7-9
 见面,HSK1
 观众,HSK3
@@ -9311,7 +9243,7 @@ Word,Level
 诗歌,HSK5
 诚信,HSK4
 诚实,HSK4
-诚心诚意,HSK7-9
+诚心,HSK7-9
 诚恳,HSK7-9
 诚意,HSK7-9
 诚挚,HSK7-9
@@ -9343,11 +9275,8 @@ Word,Level
 诱惑,HSK7-9
 诱饵,HSK7-9
 说,HSK1
-说不上,HSK7-9
 说不定,HSK4
 说到底,HSK7-9
-说实话,HSK6
-说干就干,HSK7-9
 说情,HSK7-9
 说明,HSK2
 说明书,HSK6
@@ -9358,12 +9287,10 @@ Word,Level
 说老实话,HSK7-9
 说话,HSK1
 说谎,HSK7-9
-说起来,HSK7-9
 说道,HSK7-9
 说闲话,HSK7-9
 请,HSK1
 请假,HSK1
-请坐,HSK1
 请客,HSK2
 请帖,HSK7-9
 请教,HSK3
@@ -9387,7 +9314,6 @@ Word,Level
 课程,HSK3
 课题,HSK5
 谁,HSK1
-谁知道,HSK7-9
 调,HSK3
 调侃,HSK7-9
 调动,HSK5
@@ -9403,7 +9329,6 @@ Word,Level
 调试,HSK7-9
 谅解,HSK7-9
 谈,HSK3
-谈不上,HSK7-9
 谈判,HSK3
 谈到,HSK7-9
 谈论,HSK7-9
@@ -9426,7 +9351,6 @@ Word,Level
 谱,HSK7-9
 谴责,HSK7-9
 豁,HSK7-9
-豁出去,HSK7-9
 豁达,HSK7-9
 豆制品,HSK5
 豆子,HSK7-9
@@ -9563,7 +9487,6 @@ Word,Level
 赴,HSK7-9
 赶,HSK3
 赶上,HSK6
-赶不上,HSK6
 赶到,HSK3
 赶往,HSK7-9
 赶忙,HSK6
@@ -9624,8 +9547,6 @@ Word,Level
 距,HSK7-9
 距离,HSK4
 跟,HSK1
-跟上,HSK7-9
-跟不上,HSK7-9
 跟前,HSK5
 跟踪,HSK7-9
 跟随,HSK5
@@ -9792,6 +9713,7 @@ Word,Level
 边缘,HSK6
 边远,HSK7-9
 辽阔,HSK7-9
+达,HSK7-9
 达到,HSK3
 达成,HSK5
 达标,HSK7-9
@@ -9799,7 +9721,6 @@ Word,Level
 迁就,HSK7-9
 迁移,HSK7-9
 迄今,HSK7-9
-迄今为止,HSK7-9
 迅速,HSK4
 过,HSK1
 过不去,HSK7-9
@@ -9901,7 +9822,7 @@ Word,Level
 远离,HSK6
 远程,HSK7-9
 远见,HSK7-9
-远近闻名,HSK7-9
+远近,HSK7-9
 远远,HSK6
 违反,HSK5
 违法,HSK5
@@ -9936,7 +9857,6 @@ Word,Level
 迷失,HSK7-9
 迷恋,HSK7-9
 迷惑,HSK7-9
-迷惑不解,HSK7-9
 迷路,HSK7-9
 迹象,HSK7-9
 追,HSK3
@@ -10034,8 +9954,8 @@ Word,Level
 通风,HSK7-9
 逛,HSK4
 逝世,HSK7-9
+逞,HSK7-9
 逞强,HSK7-9
-逞能,HSK7-9
 速度,HSK3
 造,HSK3
 造价,HSK7-9
@@ -10044,7 +9964,6 @@ Word,Level
 造就,HSK7-9
 造成,HSK3
 造福,HSK7-9
-造纸术,HSK7-9
 逢,HSK7-9
 逮,HSK7-9
 逮捕,HSK7-9
@@ -10156,8 +10075,8 @@ Word,Level
 酒鬼,HSK5
 酗酒,HSK7-9
 酝酿,HSK7-9
+酣,HSK7-9
 酣畅,HSK7-9
-酣睡,HSK7-9
 酥,HSK7-9
 酱,HSK6
 酱油,HSK6
@@ -10290,7 +10209,7 @@ Word,Level
 错,HSK1
 错位,HSK7-9
 错别字,HSK7-9
-错综复杂,HSK7-9
+错综,HSK7-9
 错觉,HSK7-9
 错误,HSK3
 错过,HSK6
@@ -10318,15 +10237,14 @@ Word,Level
 长征,HSK7-9
 长效,HSK7-9
 长期,HSK3
-长期以来,HSK7-9
 长相,HSK7-9
 长短,HSK6
 长足,HSK7-9
 长跑,HSK6
 长辈,HSK7-9
-长达,HSK7-9
 长远,HSK6
 长途,HSK4
+长青,HSK7-9
 门,HSK1
 门口,HSK1
 门当户对,HSK7-9
@@ -10359,7 +10277,6 @@ Word,Level
 闸,HSK7-9
 闹,HSK4
 闹事,HSK7-9
-闹着玩儿,HSK7-9
 闹钟,HSK4
 闺女,HSK7-9
 闻,HSK2
@@ -10468,8 +10385,8 @@ Word,Level
 随便,HSK2
 随即,HSK7-9
 随后,HSK5
-随处可见,HSK7-9
-随大溜,HSK7-9
+随处,HSK7-9
+随大,HSK7-9
 随心所欲,HSK7-9
 随意,HSK5
 随手,HSK4
@@ -10498,8 +10415,6 @@ Word,Level
 难,HSK1
 难为情,HSK7-9
 难以,HSK5
-难以想象,HSK7-9
-难以置信,HSK7-9
 难免,HSK4
 难关,HSK7-9
 难受,HSK2
@@ -10636,6 +10551,7 @@ Word,Level
 顺畅,HSK7-9
 顺着,HSK7-9
 顺路,HSK7-9
+顺风,HSK2
 须,HSK7-9
 顽固,HSK7-9
 顽强,HSK6
@@ -10643,7 +10559,7 @@ Word,Level
 顾,HSK6
 顾不上,HSK7-9
 顾不得,HSK7-9
-顾全大局,HSK7-9
+顾全,HSK7-9
 顾及,HSK7-9
 顾客,HSK2
 顾虑,HSK7-9
@@ -10835,6 +10751,7 @@ Word,Level
 骚乱,HSK7-9
 骚扰,HSK7-9
 骤然,HSK7-9
+骤雨,HSK7-9
 骨头,HSK4
 骨干,HSK7-9
 骨折,HSK7-9
@@ -10858,7 +10775,7 @@ Word,Level
 高度,HSK5
 高手,HSK6
 高效,HSK7-9
-高新技术,HSK7-9
+高新,HSK7-9
 高昂,HSK7-9
 高明,HSK7-9
 高档,HSK6
@@ -10876,7 +10793,6 @@ Word,Level
 高超,HSK7-9
 高跟鞋,HSK5
 高速,HSK3
-高速公路,HSK3
 高铁,HSK4
 高雅,HSK7-9
 高额,HSK7-9
@@ -10949,7 +10865,7 @@ Word,Level
 鼻涕,HSK7-9
 齐,HSK3
 齐全,HSK5
-齐心协力,HSK7-9
+齐心,HSK7-9
 龙,HSK3
 龙舟,HSK7-9
 龟,HSK7-9

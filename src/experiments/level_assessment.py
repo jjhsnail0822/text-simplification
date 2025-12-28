@@ -125,12 +125,21 @@ class LevelAssessor:
         return docs
 
     def _counts_from_doc(self, doc, lang):
+        tokens_to_process = []
+        for token in doc:
+            if lang == 'ja' or lang == 'ko':
+                if token.pos_ in ["ADP", "AUX", "PART", "SCONJ", "CCONJ", "DET", "PRON"]: # stopwords for Japanese and Korean
+                    continue
+            if token.pos_ in ["SYM", "PUNCT", "SPACE", "X", "PROPN"]: # skip punctuation, symbols, proper nouns for all languages
+                continue
+            tokens_to_process.append(token)
+        
         if lang == 'zh':
             # for Chinese, use characters directly
-            lemma_text = " ".join([token.text.lower() for token in doc])
+            lemma_text = " ".join([token.text.lower() for token in tokens_to_process])
         else:
-            lemma_text = " ".join([token.lemma_.lower() for token in doc])
-
+            lemma_text = " ".join([token.lemma_.lower() for token in tokens_to_process])
+        
         # spacy does not split compound words in Korean, so replace + with space
         if lang == 'ko':
             lemma_text = lemma_text.replace("+", " ")
@@ -160,25 +169,34 @@ class LevelAssessor:
             elif token.isdigit() or token in '１２３４５６７８９０':
                 continue
             else:
-                unknown_counts[token] += 1
+                if lang == 'zh' and len(token) >= 2:
+                    # for Chinese, split into characters
+                    for char in token:
+                        if char in self.word_level_dict[lang]:
+                            counts[char] += 1
+                        else:
+                            unknown_counts[char] += 1 # unknown characters
+                else:
+                    unknown_counts[token] += 1 # unknown words
 
         return counts, unknown_counts
 
-    def _level_stats(self, counts, target_idx, lang):
+    def _level_stats(self, counts, unknown_counts, target_idx, lang):
         # frequency-based ratio at or under target level
         level_counts = {lvl: 0 for lvl in self.LEVEL_ORDER[lang].keys()}
         for tok, cnt in counts.items():
             lvl = self.word_level_dict[lang][tok]["level"]
             level_counts[lvl] += cnt
 
-        total_freq = sum(level_counts.values())
+        total_freq = sum(level_counts.values()) + sum(unknown_counts.values())
+        
         freq_reward = (
             sum(c for lvl, c in level_counts.items() if self.LEVEL_ORDER[lang][lvl] <= target_idx) / total_freq
             if total_freq > 0 else 0.0
         )
 
         # unique-type coverage ratio
-        unique_total = len(counts)
+        unique_total = len(counts) + len(unknown_counts)
         unique_easy = 0
         for tok in counts.keys():
             lvl = self.word_level_dict[lang][tok]["level"]
@@ -193,8 +211,8 @@ class LevelAssessor:
         rewards = []
         for i, doc in enumerate(docs):
             target_idx = self.LEVEL_ORDER[langs[i]][levels[i]]
-            counts, _ = self._counts_from_doc(doc, langs[i])
-            freq_reward, _ = self._level_stats(counts, target_idx, langs[i])
+            counts, unknown_counts = self._counts_from_doc(doc, langs[i])
+            freq_reward, _ = self._level_stats(counts, unknown_counts, target_idx, langs[i])
             rewards.append(freq_reward)
         return rewards
 
@@ -204,22 +222,35 @@ class LevelAssessor:
         rewards = []
         for i, doc in enumerate(docs):
             target_idx = self.LEVEL_ORDER[langs[i]][levels[i]]
-            counts, _ = self._counts_from_doc(doc, langs[i])
-            _, coverage_reward = self._level_stats(counts, target_idx, langs[i])
+            counts, unknown_counts = self._counts_from_doc(doc, langs[i])
+            _, coverage_reward = self._level_stats(counts, unknown_counts, target_idx, langs[i])
             rewards.append(coverage_reward)
         return rewards
 
     def evaluate_vocab_level(self, output, level, lang):
-        level = self.LEVEL_CONVERT[lang][level]
+        # Convert raw level string to internal level key
+        level_internal = self.LEVEL_CONVERT[lang][level]
         doc = self._get_docs_cached([output], [lang])[0]
         counts, unknown_counts = self._counts_from_doc(doc, lang)
+        
+        # Calculate scores using the same logic as reward_vocab_level
+        target_idx = self.LEVEL_ORDER[lang][level_internal]
+        freq_reward, coverage_reward = self._level_stats(counts, unknown_counts, target_idx, lang)
+
         # return number of each level words and unk words
         level_counts = {lvl: 0 for lvl in self.LEVEL_ORDER[lang].keys()}
         total_count = sum(counts.values()) + sum(unknown_counts.values())
         for tok, cnt in counts.items():
             lvl = self.word_level_dict[lang][tok]["level"]
             level_counts[lvl] += cnt
-        result = {"level_counts": level_counts, "unk_count": sum(unknown_counts.values()), "total_count": total_count}
+            
+        result = {
+            "level_counts": level_counts, 
+            "unk_count": sum(unknown_counts.values()), 
+            "total_count": total_count,
+            "score": freq_reward,
+            "coverage_score": coverage_reward
+        }
         return result
 
 

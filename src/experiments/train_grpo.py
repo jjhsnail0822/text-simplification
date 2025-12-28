@@ -565,22 +565,24 @@ Output only a single integer from 0 to 100, and say nothing else.
         langs = kwargs['language']
         return level_assessor.reward_unique_words(completion_contents, levels, langs)
 
-def main():
+def initialize_resources(model_id_arg=None):
     global tokenizer, bertscorer, level_assessor, spacy_nlp
     global nli_tokenizer, nli_model, nli_device, entail_id
 
-    # Load dataset
-    dataset = load_from_disk("data/wikipedia/dataset/all")
-    dataset = dataset["train"]
+    # Use argument if provided, else fallback to global/env
+    mid = model_id_arg if model_id_arg else MODEL_ID
+
+    print(f"Initializing resources with Model ID: {mid}")
 
     # Init model/tokenizer
-    model_id = MODEL_ID
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        dtype="auto",
-        attn_implementation="flash_attention_2",
-    )
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    # Note: We don't load the full CausalLM here if we only need the tokenizer for rewards,
+    # but some rewards might rely on it. For evaluation, we mostly need the tokenizer.
+    # If the main script needs the model, it should load it. 
+    # Here we ensure tokenizer is available for RewardFunctionContainer.
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(mid)
+    except Exception as e:
+        print(f"Warning: Could not load tokenizer for {mid}: {e}")
 
     # Init BERTScore scorer
     device_str = f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
@@ -619,7 +621,23 @@ def main():
         'ko': level_assessor.nlp['ko'],
         'zh': level_assessor.nlp['zh'],
     }
+    print("Resources initialized successfully.")
 
+def main():
+    # Load dataset
+    dataset = load_from_disk("data/wikipedia/dataset/all")
+    dataset = dataset["train"]
+
+    # Init resources using the new function
+    initialize_resources(MODEL_ID)
+    
+    # Load model for training (kept in main as it's specific to training)
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_ID,
+        dtype="auto",
+        attn_implementation="flash_attention_2",
+    )
+    
     r = RewardFunctionContainer()
 
     # Truncate long prompts
@@ -660,7 +678,7 @@ def main():
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
         # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         beta = 0.002,
-        reward_weights=[4.0, 1.0, 2.0],
+        reward_weights=[4.0, 1.0, 4.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
         seed=42,
     )
