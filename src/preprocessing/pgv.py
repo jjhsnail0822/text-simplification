@@ -6,7 +6,6 @@ import json
 import random
 from tqdm import tqdm
 from transformers import AutoTokenizer
-from matplotlib import pyplot
 random.seed(42)
 
 load_path = "data/pgv"
