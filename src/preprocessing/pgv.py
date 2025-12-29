@@ -96,8 +96,7 @@ random.shuffle(dataset)
 dataset = Dataset.from_list(dataset)
 
 #only need test set
-dataset = dataset.train_test_split(test_size=1, seed=42)
 
 os.makedirs(save_path, exist_ok=True)
 dataset.save_to_disk(save_path)
-print(len(dataset['test']))
+print(len(dataset))
