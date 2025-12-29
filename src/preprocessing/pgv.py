@@ -93,10 +93,11 @@ for lang in LANGS:
     dataset.extend(sampled)
 
 random.shuffle(dataset)
-dataset = Dataset.from_list(dataset)
 
 #only need test set
+dataset = Dataset.from_dict({'test':dataset})
+
 
 os.makedirs(save_path, exist_ok=True)
 dataset.save_to_disk(save_path)
-print(len(dataset))
+print(len(dataset['test']))
