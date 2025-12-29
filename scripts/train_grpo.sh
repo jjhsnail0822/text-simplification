@@ -18,7 +18,7 @@ export EVAL_VLLM_ENDPOINT=http://localhost:8008/v1
 CUDA_VISIBLE_DEVICES=0 vllm serve $EVALUATOR_MODEL_ID \
   --port 8008 --data-parallel-size 1 --gpu-memory-utilization 0.95 \
   --served-model-name evaluator \
-  --max-model-len 1024 \
+  --max-model-len 4096 \
   --uvicorn-log-level warning \
   --disable-uvicorn-access-log \
   --disable-log-requests \

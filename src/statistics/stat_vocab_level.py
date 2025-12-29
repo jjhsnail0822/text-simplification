@@ -53,7 +53,8 @@ def compute_below_exact(score_obj: dict | None, lang: str, target_level: str) ->
         return None
 
     level_counts = score_obj["level_counts"]
-    total_count = sum(level_counts.values())
+    total_count = score_obj['total_count']
+    
     if total_count <= 0:
         return {"below_level_score": 0.0, "exact_level_score": 0.0}
 
@@ -68,7 +69,20 @@ def compute_below_exact(score_obj: dict | None, lang: str, target_level: str) ->
         "exact_level_score": exact_level_count / total_count,
     }
 
+# Helper function to calculate average scores
+def avg(scores: list[dict]) -> dict | None:
+    # Average a list of {"below_level_score": x, "exact_level_score": y}
+    if not scores:
+        return None
+    return {
+        "avg_below_level_score": sum(s["below_level_score"] for s in scores) / len(scores),
+        "avg_exact_level_score": sum(s["exact_level_score"] for s in scores) / len(scores),
+    }
+
 scores_summary = {}
+# Dictionary to store scores across all models for global average calculation
+global_lang_level_scores = {}
+
 for model_name in vocab_level_results:
     lang_level_scores = {}
     for sample in vocab_level_results[model_name]:
@@ -86,10 +100,18 @@ for model_name in vocab_level_results:
         if level not in lang_level_scores[lang]:
             lang_level_scores[lang][level] = {"output": [], "original": []}
 
+        # Initialize global storage if needed
+        if lang not in global_lang_level_scores:
+            global_lang_level_scores[lang] = {}
+        if level not in global_lang_level_scores[lang]:
+            global_lang_level_scores[lang][level] = {"output": [], "original": []}
+
         if out_stats is not None:
             lang_level_scores[lang][level]["output"].append(out_stats)
+            global_lang_level_scores[lang][level]["output"].append(out_stats)
         if orig_stats is not None:
             lang_level_scores[lang][level]["original"].append(orig_stats)
+            global_lang_level_scores[lang][level]["original"].append(orig_stats)
 
     # Calculate average scores
     for lang in lang_level_scores:
@@ -97,21 +119,25 @@ for model_name in vocab_level_results:
             out_list = lang_level_scores[lang][level]["output"]
             orig_list = lang_level_scores[lang][level]["original"]
 
-            def avg(scores: list[dict]) -> dict | None:
-                # Average a list of {"below_level_score": x, "exact_level_score": y}
-                if not scores:
-                    return None
-                return {
-                    "avg_below_level_score": sum(s["below_level_score"] for s in scores) / len(scores),
-                    "avg_exact_level_score": sum(s["exact_level_score"] for s in scores) / len(scores),
-                }
-
             lang_level_scores[lang][level] = {
                 "output": avg(out_list),
                 "original": avg(orig_list),
             }
 
     scores_summary[model_name] = lang_level_scores
+
+# Calculate and add global average scores across all models
+scores_summary["Average"] = {}
+for lang in global_lang_level_scores:
+    scores_summary["Average"][lang] = {}
+    for level in global_lang_level_scores[lang]:
+        out_list = global_lang_level_scores[lang][level]["output"]
+        orig_list = global_lang_level_scores[lang][level]["original"]
+
+        scores_summary["Average"][lang][level] = {
+            "output": avg(out_list),
+            "original": avg(orig_list),
+        }
 
 # Sort level keys by LEVEL_ORDER
 # Sort language keys by LANGUAGES

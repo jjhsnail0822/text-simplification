@@ -23,7 +23,7 @@ plt.rcParams.update({
 # -----------------------------
 # Option A) Drop the highest-K target variants (bars) per language.
 # Example: {"en": 1} will drop C2 (the highest target level bar).
-DROP_TOP_TARGET_K = {"en": 1, "ja": 1, "ko": 1, "zh": 1}
+DROP_TOP_TARGET_K = {"en": 0, "ja": 0, "ko": 0, "zh": 0}
 
 # Option B) Set the maximum target variant to display (inclusive).
 # If set, this takes priority over DROP_TOP_TARGET_K.
@@ -123,7 +123,8 @@ def _collect_per_model_stats(lang: str):
 
             # --- Output/simplified stats ---
             level_counts = sample.get("vocab_level_score", {}).get("level_counts", {}) or {}
-            total_count = sum(level_counts.values())
+            total_count = sample.get("vocab_level_score", {}).get("total_count")
+            
             if total_count > 0:
                 if variant not in compositions:
                     compositions[variant] = {lvl: 0 for lvl in base_order}
@@ -134,7 +135,8 @@ def _collect_per_model_stats(lang: str):
 
             # --- Original/source stats ---
             orig_level_counts = sample.get("original_vocab_level_score", {}).get("level_counts", {}) or {}
-            orig_total_count = sum(orig_level_counts.values())
+            orig_total_count = sample.get("original_vocab_level_score", {}).get("total_count")
+            
             if orig_total_count > 0:
                 if variant not in orig_compositions:
                     orig_compositions[variant] = {lvl: 0 for lvl in base_order}
@@ -267,6 +269,11 @@ def _plot_language_panel(ax, lang: str, model_colors: dict, model_markers: dict)
         percents = [avg_percents[v][lvl] for v in variants_sorted]
         ax.bar(x, percents, width, bottom=bottoms, color=color)
         bottoms += np.array(percents)
+
+    # Fill the remaining percentage (Unknown, Proper nouns, etc.) with gray
+    remainders = 100.0 - bottoms
+    remainders = np.maximum(remainders, 0)
+    ax.bar(x, remainders, width, bottom=bottoms, color="#CCCCCC")
 
     ax.set_ylim(0, 112)
 

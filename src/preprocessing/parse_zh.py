@@ -1,5 +1,7 @@
 import pandas as pd
 import re
+import spacy
+from tqdm import tqdm
 
 # Define level order so "lowest" can be computed robustly
 LEVEL_ORDER = ["HSK1", "HSK2", "HSK3", "HSK4", "HSK5", "HSK6", "HSK7-9"]
@@ -9,26 +11,29 @@ in_path = "data/wordlist_zh_raw.csv"
 out_path = "data/wordlist_zh.csv"
 
 df = pd.read_csv(in_path, engine="python", keep_default_na=False)
+nlp = spacy.load("zh_core_web_trf")
 
 new_data = []
 
-for idx, row in df.iterrows():
+for idx, row in tqdm(df.iterrows(), total=df.shape[0]):
     # remove "()", "（ ）", "…"
-    word = re.sub(r"\(.*?\)|（.*?）|…", "", row['word']).strip()
+    words = re.sub(r"\(.*?\)|（.*?）|…", "", row['word']).strip()
     # remove ¹ to ⁹
-    word = re.sub(r"[¹²³⁴⁵⁶⁷⁸⁹]", "", word)
+    words = re.sub(r"[¹²³⁴⁵⁶⁷⁸⁹]", "", words)
     # remove extra spaces
-    word = re.sub(r"\s+", " ", word)
+    words = re.sub(r"\s+", " ", words)
     # split "/", "...", "｜"
-    words = re.split(r"/|\.\.\.|｜|…", word)
-    for w in words:
-        w = w.strip()
-        if w == "":
-            continue
-        new_data.append({
-            "Word": w,
-            "Level": row["level"],
-        })
+    words = re.split(r"/|\.\.\.|｜|…", words)
+    for word in words:
+        doc = nlp(word)
+        for tok in doc:
+            tok = tok.text
+            if tok == "":
+                continue
+            new_data.append({
+                "Word": tok,
+                "Level": row["level"],
+                })
 
 # only remain the lowest level for each word
 cleaned_dict = {}

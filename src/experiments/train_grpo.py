@@ -83,7 +83,7 @@ class RewardFunctionContainer:
                     client.chat.completions.create(
                         model="evaluator",
                         messages=messages,
-                        max_tokens=2,
+                        max_tokens=3,
                         temperature=0.0,
                         extra_body={
                             "chat_template_kwargs": {"enable_thinking": False},
@@ -153,26 +153,38 @@ class RewardFunctionContainer:
         #     "[TEXT]\n{text}"
         # )
         prompt = (
-            """You are evaluating {language} text quality. Rate the NATURALNESS of the [TEXT] strictly according to the following rules:
+            """You are evaluating {language} text quality for a text simplification system.
 
-10 = indistinguishable from a native human-written well-edited text
-7-9 = generally natural but contains minor unnatural phrasing
-4-6 = understandable but contains multiple awkward and unnatural expressions
-1-3 = sounds clearly machine-generated, frequently unnatural or repetitive
-0 = extremely incoherent or clearly broken language
+Given [ORIGINAL_TEXT] and [SIMPLIFIED_TEXT], focus ONLY on how natural and fluent the [SIMPLIFIED_TEXT] reads as a rewrite of the [ORIGINAL_TEXT]. Rate the NATURALNESS of the [SIMPLIFIED_TEXT] as if it were written by a native speaker, strictly according to the following rules:
 
-Output only a single integer from 0-10, and say nothing else.
+100 = indistinguishable from a native human-written well-edited text
+80-99 = highly natural with only minor unnatural phrasing
+60-79 = generally understandable but contains multiple awkward and unnatural expressions
+30-59 = sounds clearly machine-generated, frequently unnatural or repetitive
+0-29 = extremely incoherent or clearly broken language
 
-[TEXT]
-{text}"""
+Critical penalties:
+- Strongly penalize repetitive template phrasing (e.g., repeating the same word/phrase many times to fill text).
+- Strongly penalize awkward connective phrases or unnatural sentence patterns.
+- Do NOT reward being 'simple' if it becomes unnatural. Simple but fully natural text should still receive a high score.
+
+Use the full 0–100 range. Reflect even small differences in naturalness with 1-point precision.
+Output only a single integer from 0 to 100, and say nothing else.
+
+[ORIGINAL_TEXT]
+{original_text}
+
+[SIMPLIFIED_TEXT]
+{simplified_text}"""
         )
         completion_contents = [completion[0]["content"] for completion in completions]
-        langs = kwargs['language']
+        references = self.prompts_to_references(kwargs["prompts"])
+        langs = kwargs["language"]
 
         all_messages = []
-        for i, comp in enumerate(completion_contents):
+        for i, (comp, ref) in enumerate(zip(completion_contents, references)):
             language = LANG_TO_LANGUAGE[langs[i]]
-            prompt_filled = prompt.format(language=language, text=comp)
+            prompt_filled = prompt.format(language=language, original_text=ref, simplified_text=comp)
             all_messages.append([{"role": "user", "content": prompt_filled}])
 
         # Chunk to avoid firing too many concurrent requests at once.
@@ -188,11 +200,12 @@ Output only a single integer from 0-10, and say nothing else.
             all_texts.extend(["0"] * (len(all_messages) - len(all_texts)))
 
         rewards = []
-        for t in all_texts:
+        for comp, t in zip(completion_contents, all_texts):
             t = (t or "").strip().lower()
-            score = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
-            score = max(0, min(10, score))
-            rewards.append(score / 10.0)
+            reward = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
+
+            reward = max(0, min(100, reward)) / 100.0  # normalize to [0, 1]
+            rewards.append(reward)
 
         return rewards
 
@@ -258,12 +271,32 @@ Output only a single integer from 0-10, and say nothing else.
             assert nli_tokenizer is not None and nli_model is not None and nli_device is not None
             assert entail_id is not None
 
-            out_bools = []
+            n = len(premises)
+            out_bools = [False] * n
+            
+            # Indices that need model prediction
+            todo_indices = []
+            todo_premises = []
+            todo_hypotheses = []
+
+            for i, (p, h) in enumerate(zip(premises, hypotheses)):
+                # Optimization: If premise and hypothesis are identical, it is entailment.
+                # This fixes the issue where NLI models predict "Neutral" for identical sentences.
+                if p.strip() == h.strip():
+                    out_bools[i] = True
+                else:
+                    todo_indices.append(i)
+                    todo_premises.append(p)
+                    todo_hypotheses.append(h)
+            
+            if not todo_premises:
+                return out_bools
+
             nli_model.eval()
             with torch.no_grad():
-                for start in range(0, len(premises), batch_size):
-                    p = premises[start : start + batch_size]
-                    h = hypotheses[start : start + batch_size]
+                for start in range(0, len(todo_premises), batch_size):
+                    p = todo_premises[start : start + batch_size]
+                    h = todo_hypotheses[start : start + batch_size]
                     enc = nli_tokenizer(
                         p,
                         h,
@@ -275,7 +308,12 @@ Output only a single integer from 0-10, and say nothing else.
                     enc = {k: v.to(nli_device) for k, v in enc.items()}
                     logits = nli_model(**enc).logits
                     pred = torch.argmax(logits, dim=-1)
-                    out_bools.extend((pred == entail_id).tolist())
+                    
+                    # Map back to original indices
+                    batch_bools = (pred == entail_id).tolist()
+                    for k, val in enumerate(batch_bools):
+                        original_idx = todo_indices[start + k]
+                        out_bools[original_idx] = val
             return out_bools
 
         completion_contents = [completion[0]["content"] for completion in completions]
@@ -527,22 +565,24 @@ Output only a single integer from 0-10, and say nothing else.
         langs = kwargs['language']
         return level_assessor.reward_unique_words(completion_contents, levels, langs)
 
-def main():
+def initialize_resources(model_id_arg=None):
     global tokenizer, bertscorer, level_assessor, spacy_nlp
     global nli_tokenizer, nli_model, nli_device, entail_id
 
-    # Load dataset
-    dataset = load_from_disk("data/wikipedia/dataset/all")
-    dataset = dataset["train"]
+    # Use argument if provided, else fallback to global/env
+    mid = model_id_arg if model_id_arg else MODEL_ID
+
+    print(f"Initializing resources with Model ID: {mid}")
 
     # Init model/tokenizer
-    model_id = MODEL_ID
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        dtype="auto",
-        attn_implementation="flash_attention_2",
-    )
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    # Note: We don't load the full CausalLM here if we only need the tokenizer for rewards,
+    # but some rewards might rely on it. For evaluation, we mostly need the tokenizer.
+    # If the main script needs the model, it should load it. 
+    # Here we ensure tokenizer is available for RewardFunctionContainer.
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(mid)
+    except Exception as e:
+        print(f"Warning: Could not load tokenizer for {mid}: {e}")
 
     # Init BERTScore scorer
     device_str = f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu"
@@ -581,7 +621,23 @@ def main():
         'ko': level_assessor.nlp['ko'],
         'zh': level_assessor.nlp['zh'],
     }
+    print("Resources initialized successfully.")
 
+def main():
+    # Load dataset
+    dataset = load_from_disk("data/wikipedia/dataset/all")
+    dataset = dataset["train"]
+
+    # Init resources using the new function
+    initialize_resources(MODEL_ID)
+    
+    # Load model for training (kept in main as it's specific to training)
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_ID,
+        dtype="auto",
+        attn_implementation="flash_attention_2",
+    )
+    
     r = RewardFunctionContainer()
 
     # Truncate long prompts
@@ -622,7 +678,7 @@ def main():
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
         # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         beta = 0.002,
-        reward_weights=[3.0, 1.0, 1.0, 3.0],
+        reward_weights=[4.0, 1.0, 4.0],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
         seed=42,
     )
@@ -633,7 +689,7 @@ def main():
         reward_funcs=[
             r.reward_vocab_level,
             # r.reward_unique_words,
-            r.reward_bertscore,
+            # r.reward_bertscore,
             r.reward_entailment,
             # r.reward_length_ratio,
             # r.reward_distinct_n,
