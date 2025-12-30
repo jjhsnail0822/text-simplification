@@ -25,7 +25,7 @@ OVERHEAD_TOKENS = len(
 MODEL_CONTEXT = 512
 DOCUMENTS_PER_LANGUAGE = 300
 MAX_TEXT_TOKENS = max(1, MODEL_CONTEXT - OVERHEAD_TOKENS - 10)
-EXCLUDE_TYPES = ['contributor','notes','tweet-info','caption']
+EXCLUDE_TYPES = ['contributor','notes','tweet-info','caption','title']
 dataset = []
 dataset_lang={'ko':[],'en':[], 'ja':[], 'zh':[]}
 def _tok_len(s: str) -> int:
