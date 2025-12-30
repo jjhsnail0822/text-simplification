@@ -30,6 +30,10 @@ VLLM_CHUNK_SIZE = 128
 
 MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen3-4B-Instruct-2507")
 
+WEIGHT_VOCAB = float(os.environ.get("WEIGHT_VOCAB"))
+WEIGHT_ENTAILMENT = float(os.environ.get("WEIGHT_ENTAILMENT"))
+WEIGHT_COHERENCE = float(os.environ.get("WEIGHT_COHERENCE"))
+
 evaluator_model_id = os.environ.get("EVALUATOR_MODEL_ID", "Qwen/Qwen3-4B-Instruct-2507")
 
 save_dir = os.environ.get("OUTPUT_DIR", "results/grpo/Qwen3-4B-Instruct-2507-GRPO")
@@ -678,9 +682,10 @@ def main():
         # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
         # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         beta = 0.002,
-        reward_weights=[4.0, 1.0, 4.0],
+        reward_weights=[WEIGHT_VOCAB, WEIGHT_ENTAILMENT, WEIGHT_COHERENCE],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
         seed=42,
+        num_train_epochs = 0.5,
     )
 
     # Trainer

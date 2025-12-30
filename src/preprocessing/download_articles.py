@@ -127,7 +127,6 @@ class WikipediaContentDownloader:
                             'word_count': len(wikitext.split()) if wikitext else 0
                         }
                         
-                        # JSON 직렬화 테스트
                         try:
                             json_str = json.dumps(article_data, ensure_ascii=False, indent=2)
                             with open(filepath, 'w', encoding='utf-8') as f:
@@ -158,7 +157,6 @@ class WikipediaContentDownloader:
         
         print(f"\n Download Compelete! Output dir: {output_dir}")
         
-        # 통계 출력
         for language in by_language:
             lang_dir = output_dir / language
             file_count = len(list(lang_dir.glob('*.json')))

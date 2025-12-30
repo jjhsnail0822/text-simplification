@@ -24,7 +24,7 @@ def main():
     model_id_name = model_id.split('/')[-1]
     tokenizer = AutoTokenizer.from_pretrained(model_id)
 
-    dataset = load_from_disk("data/wikipedia/dataset/all")
+    dataset = load_from_disk("data/pgv/dataset/all")
     dataset = dataset['test']
 
     # levels = {
@@ -35,7 +35,7 @@ def main():
     #     }
 
     results = []
-    output_path = f"results/llm_test/{model_id_name}.json"
+    output_path = f"results/llm_test_pgv/{model_id_name}.json" if 'checkpoint' not in model_id_name else f"results/trained_llm_test_pgv/{model_id_name}.json"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     sampling_params = SamplingParams(max_tokens=2048, temperature=0.0)

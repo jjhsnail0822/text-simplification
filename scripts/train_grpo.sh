@@ -11,6 +11,10 @@ export EVALUATOR_MODEL_ID="Qwen/Qwen3-14B"
 
 export OUTPUT_DIR="results/grpo/Qwen3-4B-Instruct-2507-GRPO-14B"
 
+export WEIGHT_VOCAB=2.0
+export WEIGHT_ENTAILMENT=1.0
+export WEIGHT_COHERENCE=2.0
+
 export USE_EVAL_VLLM=1
 export VLLM_BATCH_INVARIANT=1
 export EVAL_VLLM_ENDPOINT=http://localhost:8008/v1

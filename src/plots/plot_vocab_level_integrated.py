@@ -204,7 +204,8 @@ def _plot_language_panel(ax, lang: str, model_colors: dict, model_markers: dict)
     base_order = list(LEVEL_ORDER[lang].keys())
     model_stats = _collect_per_model_stats(lang)
 
-    ax.set_title(f"Language: {lang.upper()}", pad=14)
+    labels = {"en": "English", "ja": "Japanese", "ko": "Korean", "zh": "Chinese"}
+    ax.set_title(f"Language: {labels.get(lang, lang.upper())}", pad=14)
 
     if not model_stats:
         ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
@@ -270,10 +271,10 @@ def _plot_language_panel(ax, lang: str, model_colors: dict, model_markers: dict)
         ax.bar(x, percents, width, bottom=bottoms, color=color)
         bottoms += np.array(percents)
 
-    # Fill the remaining percentage (Unknown, Proper nouns, etc.) with gray
+    # Fill the remaining percentage (Unknown, etc.) with gray
     remainders = 100.0 - bottoms
     remainders = np.maximum(remainders, 0)
-    ax.bar(x, remainders, width, bottom=bottoms, color="#CCCCCC")
+    ax.bar(x, remainders, width, bottom=bottoms, color="#888888")
 
     ax.set_ylim(0, 112)
 
