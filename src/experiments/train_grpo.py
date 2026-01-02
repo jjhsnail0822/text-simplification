@@ -69,6 +69,8 @@ EVAL_VLLM_ENDPOINT = os.environ.get("EVAL_VLLM_ENDPOINT", "http://localhost:8008
 USE_EVAL_VLLM = os.environ.get("USE_EVAL_VLLM", "0") == "1"
 _vllm_client = None
 
+TRAINING_FLAG = os.environ.get("TRAINING_FLAG", "0") == "1"
+
 class RewardFunctionContainer:
     def __init__(self):
         pass
@@ -209,7 +211,63 @@ Output only a single integer from 0 to 100, and say nothing else.
             reward = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
 
             reward = max(0, min(100, reward)) / 100.0  # normalize to [0, 1]
+
+            # # If TRAINING_FLAG is set and reward is less than tau, apply linear penalty:
+            # # y = tau - k * (tau - x)
+            # tau = 0.95
+            # k = float(19/7)
+            # if TRAINING_FLAG:
+            #     if reward < tau:
+            #         reward = tau - k * (tau - reward)
+            #         reward = max(0.0, reward)
+            #     else:
+            #         reward = tau
             rewards.append(reward)
+
+        if TRAINING_FLAG:
+            alpha = 0.05
+            levels = kwargs['level']
+
+            def get_hard_token_sets(texts, langs, levels):
+                token_sets = []
+                docs = level_assessor._get_docs_cached(texts, langs)
+                for i, doc in enumerate(docs):
+                    lang = langs[i]
+                    level_str = levels[i]
+                    
+                    level_internal = level_assessor.LEVEL_CONVERT[lang][level_str]
+                    target_idx = level_assessor.LEVEL_ORDER[lang][level_internal]
+                    
+                    counts, unknown_counts = level_assessor._counts_from_doc(doc, lang)
+                    
+                    hard_tokens = set()
+                    hard_tokens.update(unknown_counts.keys())
+                    
+                    for word in counts:
+                        word_lvl = level_assessor.word_level_dict[lang][word]["level"]
+                        word_idx = level_assessor.LEVEL_ORDER[lang][word_lvl]
+                        if word_idx > target_idx:
+                            hard_tokens.add(word)
+                    token_sets.append(hard_tokens)
+                return token_sets
+
+            comp_hard_sets = get_hard_token_sets(completion_contents, langs, levels)
+            ref_hard_sets = get_hard_token_sets(references, langs, levels)
+
+            for i in range(len(rewards)):
+                comp_set = comp_hard_sets[i]
+                ref_set = ref_hard_sets[i]
+                
+                # Calculate Jaccard Similarity
+                if not comp_set and not ref_set:
+                    jaccard_sim = 0.0
+                else:
+                    intersection = len(comp_set.intersection(ref_set))
+                    union = len(comp_set.union(ref_set))
+                    jaccard_sim = intersection / union
+                
+                # Apply penalty
+                rewards[i] = rewards[i] - (alpha * jaccard_sim)
 
         return rewards
 
@@ -283,15 +341,20 @@ Output only a single integer from 0 to 100, and say nothing else.
             todo_premises = []
             todo_hypotheses = []
 
+            # for i, (p, h) in enumerate(zip(premises, hypotheses)):
+            #     # Optimization: If premise and hypothesis are identical, it is entailment.
+            #     # This fixes the issue where NLI models predict "Neutral" for identical sentences.
+            #     if p.strip() == h.strip():
+            #         out_bools[i] = True
+            #     else:
+            #         todo_indices.append(i)
+            #         todo_premises.append(p)
+            #         todo_hypotheses.append(h)
+
             for i, (p, h) in enumerate(zip(premises, hypotheses)):
-                # Optimization: If premise and hypothesis are identical, it is entailment.
-                # This fixes the issue where NLI models predict "Neutral" for identical sentences.
-                if p.strip() == h.strip():
-                    out_bools[i] = True
-                else:
-                    todo_indices.append(i)
-                    todo_premises.append(p)
-                    todo_hypotheses.append(h)
+                todo_indices.append(i)
+                todo_premises.append(p)
+                todo_hypotheses.append(h)
             
             if not todo_premises:
                 return out_bools
@@ -376,6 +439,7 @@ Output only a single integer from 0 to 100, and say nothing else.
                 remaining_refs_after = len(sentences_ref) - (ref_i + 1)
                 max_end = len(sentences_comp) - remaining_refs_after - 1  # inclusive
                 max_end = min(max_end, comp_idx + 4 - 1)  # cap span growth to 4 sentences
+                # max_end = min(max_end, comp_idx)  # cap span growth to 1 sentence
 
                 if comp_idx >= len(sentences_comp) or comp_idx > max_end:
                     # Not enough completion sentences left to form a valid alignment.
@@ -561,7 +625,15 @@ Output only a single integer from 0 to 100, and say nothing else.
         completion_contents = [completion[0]["content"] for completion in completions]
         levels = kwargs['level']
         langs = kwargs['language']
-        return level_assessor.reward_vocab_level(completion_contents, levels, langs)
+        rewards = level_assessor.reward_vocab_level(completion_contents, levels, langs)
+
+        # If TRAINING_FLAG is set, calculate final reward as rollout vocab level - original text reward
+        if TRAINING_FLAG:
+            references = self.prompts_to_references(kwargs['prompts'])
+            ref_rewards = level_assessor.reward_vocab_level(references, levels, langs)
+            rewards = [r - ref_r for r, ref_r in zip(rewards, ref_rewards)]
+
+        return rewards
 
     def reward_unique_words(self, completions, **kwargs):
         completion_contents = [completion[0]["content"] for completion in completions]
@@ -685,7 +757,7 @@ def main():
         reward_weights=[WEIGHT_VOCAB, WEIGHT_ENTAILMENT, WEIGHT_COHERENCE],
         # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
         seed=42,
-        num_train_epochs = 0.5,
+        num_train_epochs = 0.25,
     )
 
     # Trainer

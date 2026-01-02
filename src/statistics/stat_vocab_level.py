@@ -1,4 +1,5 @@
 import json
+import math
 
 LEVEL_CONVERT = {
             "en": {
@@ -48,7 +49,7 @@ with open("results/llm_evaluation/vocab_level_results.json", 'r', encoding='utf-
     vocab_level_results = json.load(f)
 
 def compute_below_exact(score_obj: dict | None, lang: str, target_level: str) -> dict | None:
-    # Compute below-level and exact-level ratios from a score object
+    # Compute below-level ratio from a score object
     if not score_obj or "level_counts" not in score_obj:
         return None
 
@@ -56,27 +57,35 @@ def compute_below_exact(score_obj: dict | None, lang: str, target_level: str) ->
     total_count = score_obj['total_count']
     
     if total_count <= 0:
-        return {"below_level_score": 0.0, "exact_level_score": 0.0}
+        return {"below_level_score": 0.0}
 
     below_level_count = sum(
         count for lvl, count in level_counts.items()
         if LEVEL_ORDER[lang][lvl] <= LEVEL_ORDER[lang][target_level]
     )
-    exact_level_count = level_counts.get(target_level, 0)
 
     return {
         "below_level_score": below_level_count / total_count,
-        "exact_level_score": exact_level_count / total_count,
     }
 
-# Helper function to calculate average scores
+# Helper function to calculate average scores and standard deviation
 def avg(scores: list[dict]) -> dict | None:
-    # Average a list of {"below_level_score": x, "exact_level_score": y}
+    # Average a list of {"below_level_score": x}
     if not scores:
         return None
+    
+    values = [s["below_level_score"] for s in scores]
+    mean = sum(values) / len(values)
+    
+    if len(values) > 1:
+        variance = sum((x - mean) ** 2 for x in values) / (len(values) - 1)
+        std_dev = math.sqrt(variance)
+    else:
+        std_dev = 0.0
+
     return {
-        "avg_below_level_score": sum(s["below_level_score"] for s in scores) / len(scores),
-        "avg_exact_level_score": sum(s["exact_level_score"] for s in scores) / len(scores),
+        "avg_below_level_score": mean,
+        "std_below_level_score": std_dev,
     }
 
 scores_summary = {}
@@ -154,18 +163,62 @@ for model_name in scores_summary:
                 if out_avg is not None:
                     print(
                         f"    Level: {level} | Output Avg Below: {out_avg['avg_below_level_score']:.4f} | "
-                        f"Output Avg Exact: {out_avg['avg_exact_level_score']:.4f}"
+                        f"Output Std Below: {out_avg['std_below_level_score']:.4f}"
                     )
                 else:
-                    print(f"    Level: {level} | Output Avg Below: N/A | Output Avg Exact: N/A")
+                    print(f"    Level: {level} | Output Avg Below: N/A | Output Std Below: N/A")
 
                 if orig_avg is not None:
                     print(
                         f"              | Original Avg Below: {orig_avg['avg_below_level_score']:.4f} | "
-                        f"Original Avg Exact: {orig_avg['avg_exact_level_score']:.4f}"
+                        f"Original Std Below: {orig_avg['std_below_level_score']:.4f}"
                     )
                 else:
-                    print(f"              | Original Avg Below: N/A | Original Avg Exact: N/A")
+                    print(f"              | Original Avg Below: N/A | Original Std Below: N/A")
 
 with open("results/llm_evaluation/vocab_level_stats.json", 'w', encoding='utf-8') as f:
     json.dump(scores_summary, f, ensure_ascii=False, indent=4)
+
+# Generate LaTeX tables
+latex_content = ""
+for model_name in scores_summary:
+    # Escape underscores in model names for LaTeX
+    safe_model_name = model_name.replace("_", "\\_")
+    
+    latex_content += f"\\begin{{table}}[htb]\n"
+    latex_content += f"\\centering\n"
+    latex_content += f"\\small\n"
+    latex_content += f"\\begin{{tabular}}{{llcc}}\n"
+    latex_content += f"\\toprule\n"
+    latex_content += f"\\textbf{{Lang.}} & \\textbf{{Level}} & \\textbf{{Simplified}} & \\textbf{{Original}} \\\\\n"
+    latex_content += f"& & (Avg. $\\pm$ Std.) & (Avg. $\\pm$ Std.) \\\\\n\\midrule\n"
+    
+    for lang in LANGUAGES:
+        if lang in scores_summary[model_name]:
+            levels = sorted(scores_summary[model_name][lang], key=lambda x: LEVEL_ORDER[lang][x])
+            for i, level in enumerate(levels):
+                stats = scores_summary[model_name][lang][level]
+                out_stats = stats.get("output")
+                orig_stats = stats.get("original")
+                
+                out_str = "--"
+                if out_stats:
+                    out_str = f"{round(out_stats['avg_below_level_score']*100, 1)} $\\pm$ {round(out_stats['std_below_level_score']*100, 1)}"
+                
+                orig_str = "--"
+                if orig_stats:
+                    orig_str = f"{round(orig_stats['avg_below_level_score']*100, 1)} $\\pm$ {round(orig_stats['std_below_level_score']*100, 1)}"
+                
+                lang_str = lang.upper() if i == 0 else ""
+                latex_content += f"{lang_str} & {level} & {out_str} & {orig_str} \\\\\n"
+            latex_content += f"\\midrule\n"
+    
+    latex_content = latex_content.rstrip("\n\\midrule\n")
+    latex_content += f"\\\\\n\\bottomrule\n"
+    latex_content += f"\\end{{tabular}}\n"
+    latex_content += f"\\caption{{Zero-shot vocabulary coverage score statistics for {safe_model_name}.}}\n"
+    latex_content += f"\\label{{tab:detail_vocab_coverage_{safe_model_name}}}\n"
+    latex_content += f"\\end{{table}}\n\n"
+
+with open("results/llm_evaluation/vocab_level_stats_latex.txt", 'w', encoding='utf-8') as f:
+    f.write(latex_content)

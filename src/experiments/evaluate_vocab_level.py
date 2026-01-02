@@ -4,7 +4,7 @@ import os
 from tqdm import tqdm
 
 def extract_original_text(sample):
-    prompt = sample['prompt'][0]['content']
+    prompt = sample['prompt'][0]['content'] or ""
     # Assuming the original text is after a specific delimiter in the prompt
     delimiter = "<TEXT>\n" # not just <TEXT>, but <TEXT>\n
     if delimiter in prompt:
@@ -26,7 +26,7 @@ for model_name, results in data.items():
     for sample in tqdm(results, desc=f"Evaluating vocab level for {model_name}"):
         lang = sample['language']
         level = sample['level']
-        output = sample['output']
+        output = sample['output'] or ""
 
         # Evaluate output text
         vocab_level_score = levelassessor.evaluate_vocab_level(output, level, lang)

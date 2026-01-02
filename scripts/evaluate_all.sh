@@ -33,36 +33,72 @@ done
 
 export CUDA_VISIBLE_DEVICES=1
 
-# echo "Evaluating Original Text..."
-# python src/experiments/evaluate_all.py \
-#     --mode original \
-#     --output_file results/evaluation/eval_original.json \
-#     --model_id $MODEL_ID
+echo "Evaluating Original Text..."
+python src/experiments/evaluate_all.py \
+    --mode original \
+    --output_file results/evaluation/eval_original.json \
+    --model_id $MODEL_ID
 
-# ZERO_SHOT_FILE="results/llm_test/Qwen3-4B-Instruct-2507.json"
-# if [ -f "$ZERO_SHOT_FILE" ]; then
-#     echo "Evaluating Zero-Shot..."
-#     python src/experiments/evaluate_all.py \
-#         --mode zero_shot \
-#         --input_file $ZERO_SHOT_FILE \
-#         --output_file results/evaluation/eval_zeroshot.json \
-#         --model_id $MODEL_ID
-# else
-#     echo "Skipping Zero-Shot (file not found at $ZERO_SHOT_FILE)"
-# fi
+ZERO_SHOT_FILE="results/llm_test/Qwen3-4B-Instruct-2507.json"
+if [ -f "$ZERO_SHOT_FILE" ]; then
+    echo "Evaluating Zero-Shot..."
+    python src/experiments/evaluate_all.py \
+        --mode zero_shot \
+        --input_file $ZERO_SHOT_FILE \
+        --output_file results/evaluation/eval_zeroshot.json \
+        --model_id $MODEL_ID
+else
+    echo "Skipping Zero-Shot (file not found at $ZERO_SHOT_FILE)"
+fi
 
-# if [ -f "data/fudge_results.json" ]; then
-#     echo "Evaluating FUDGE..."
-#     python src/experiments/evaluate_all.py \
-#         --mode fudge \
-#         --input_file data/fudge_results.json \
-#         --output_file results/evaluation/eval_fudge.json \
-#         --model_id $MODEL_ID
-# else
-#     echo "Skipping FUDGE (file not found)"
-# fi
+GPT_FILE="results/llm_test/gpt-5.2.json"
+if [ -f "$GPT_FILE" ]; then
+    echo "Evaluating GPT-5.2..."
+    python src/experiments/evaluate_all.py \
+        --mode zero_shot \
+        --input_file $GPT_FILE \
+        --output_file results/evaluation/eval_gpt52.json \
+        --model_id $MODEL_ID
+else
+    echo "Skipping GPT-5.2 (file not found at $GPT_FILE)"
+fi
 
-TRAINED_FILE="results/trained_llm_test/checkpoint-1600-merged.json"
+GEMINI_FILE="results/llm_test/gemini-2.5-flash.json"
+if [ -f "$GEMINI_FILE" ]; then
+    echo "Evaluating GEMINI 2.5..."
+    python src/experiments/evaluate_all.py \
+        --mode zero_shot \
+        --input_file $GEMINI_FILE \
+        --output_file results/evaluation/eval_gemini25.json \
+        --model_id $MODEL_ID
+else
+    echo "Skipping GEMINI (file not found at $GEMINI_FILE)"
+fi
+
+CLAUDE_FILE="results/llm_test/claude-sonnet-4-5-20250929.json"
+if [ -f "$CLAUDE_FILE" ]; then
+    echo "Evaluating Claude 4.5..."
+    python src/experiments/evaluate_all.py \
+        --mode zero_shot \
+        --input_file $CLAUDE_FILE \
+        --output_file results/evaluation/eval_claude45.json \
+        --model_id $MODEL_ID
+else
+    echo "Skipping Claude 4.5 (file not found at $CLAUDE_FILE)"
+fi
+
+if [ -f "data/fudge_results.json" ]; then
+    echo "Evaluating FUDGE..."
+    python src/experiments/evaluate_all.py \
+        --mode fudge \
+        --input_file data/fudge_results.json \
+        --output_file results/evaluation/eval_fudge.json \
+        --model_id $MODEL_ID
+else
+    echo "Skipping FUDGE (file not found)"
+fi
+
+TRAINED_FILE="results/trained_llm_test/checkpoint-2596-merged.json"
 if [ -f "$TRAINED_FILE" ]; then
     echo "Evaluating Trained Model..."
     python src/experiments/evaluate_all.py \

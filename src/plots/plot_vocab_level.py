@@ -5,6 +5,17 @@ import numpy as np
 from matplotlib.patches import Rectangle
 from matplotlib import patheffects as pe
 
+# Increase global font sizes (~2x) for better readability
+plt.rcParams.update({
+    "font.size": 40,
+    "axes.titlesize": 40,
+    "axes.labelsize": 40,
+    "xtick.labelsize": 34,
+    "ytick.labelsize": 34,
+    "legend.fontsize": 34,
+    "legend.title_fontsize": 34,
+})
+
 LEVEL_CONVERT = {
     "en": {"CEFR A1": "A1", "CEFR A2": "A2", "CEFR B1": "B1", "CEFR B2": "B2", "CEFR C1": "C1", "CEFR C2": "C2"},
     "ja": {"JLPT N5": "N5", "JLPT N4": "N4", "JLPT N3": "N3", "JLPT N2": "N2", "JLPT N1": "N1"},
@@ -40,9 +51,14 @@ os.makedirs("results/plots", exist_ok=True)
 with open("results/llm_evaluation/vocab_level_results.json", "r", encoding="utf-8") as f:
     vocab_level_results = json.load(f)
 
-# Draw plots for each model and language (keep per-model/per-language aggregation).
+# Draw plots for each model (one figure per model, containing 4 language subplots).
 for model_name in vocab_level_results:
-    for lang in LANGUAGES:
+    # Create a 2x2 figure for the current model, similar size to integrated
+    fig, axs = plt.subplots(2, 2, figsize=(30, 20))
+    axs = axs.ravel()
+    
+    for idx, lang in enumerate(LANGUAGES):
+        ax = axs[idx]
         compositions = {}
         totals = {}
 
@@ -63,12 +79,7 @@ for model_name in vocab_level_results:
 
             # Normalize level_counts to include all defined levels for this language.
             level_counts = {lvl: int(level_counts_raw.get(lvl, 0) or 0) for lvl in LEVEL_ORDER[lang].keys()}
-
-            # IMPORTANT: total_count must include unknown words (integrated behavior).
-            # Prefer the stored total_count if present; otherwise compute it.
-            stored_total = score.get("total_count", None)
-            computed_total = sum(level_counts.values()) + unk_count
-            total_count = int(stored_total) if stored_total is not None else computed_total
+            total_count = score['total_count']
 
             if total_count <= 0:
                 continue
@@ -85,6 +96,8 @@ for model_name in vocab_level_results:
             totals[variant] += total_count
 
         if not compositions:
+            ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
+            ax.set_axis_off()
             continue
 
         # Keep x-axis ordering consistent with the language level progression.
@@ -94,8 +107,6 @@ for model_name in vocab_level_results:
 
         x = np.arange(len(variants_sorted))
         width = 0.6
-
-        fig, ax = plt.subplots(figsize=(12, 6))
         bottoms = np.zeros(len(variants_sorted))
 
         max_order = max(LEVEL_ORDER[lang].values())
@@ -137,39 +148,38 @@ for model_name in vocab_level_results:
                 cum,
                 fill=False,
                 edgecolor="black",
-                linewidth=3,
+                linewidth=3.5,
                 joinstyle="miter",
                 zorder=10,
             )
             rect.set_path_effects([
-                pe.Stroke(linewidth=6, foreground="white"),
+                pe.Stroke(linewidth=7, foreground="white"),
                 pe.Normal(),
             ])
             ax.add_patch(rect)
 
-            ax.text(
-                x[i], 102,
-                f"≤ {var}: {cum:.1f}%",
-                ha="center", va="bottom", fontsize=10
-            )
-
-        ax.set_ylim(0, 110)
-        ax.set_xlabel("Level Variant")
-        ax.set_ylabel("Vocabulary Level Composition (%)")
-        ax.set_title(f"Vocabulary Level Composition by Variant (Model: {model_name}, Lang: {lang.upper()})")
+        ax.set_ylim(0, 112)
+        ax.set_xlabel("Target Level")
+        ax.set_ylabel("Vocab Coverage (%)")
+        labels = {"en": "English", "ja": "Japanese", "ko": "Korean", "zh": "Chinese"}
+        ax.set_title(f"Lang: {labels.get(lang, lang.upper())}", pad=14)
         ax.set_xticks(x)
         ax.set_xticklabels(variants_sorted, ha="center")
+        ax.grid(axis="y", alpha=0.15)
 
-        legend_title = (
-            "CEFR Level" if lang == "en"
-            else "JLPT Level" if lang == "ja"
-            else "TOPIK Level" if lang == "ko"
-            else "HSK 3.0 Level"
-        )
-        ax.legend(title=legend_title, bbox_to_anchor=(1, 1), loc="upper left")
-
-        plt.tight_layout()
-        plt_path = f"results/plots/{model_name}_{lang}_vocab_level.png"
-        plt.savefig(plt_path, dpi=200)
-        plt.close()
-        print(f"Saved plot to {plt_path}")
+    fig.subplots_adjust(
+        left=0.08,
+        right=0.99,
+        top=0.92,
+        bottom=0.08,
+        wspace=0.2,
+        hspace=0.3,
+    )
+    
+    # fig.suptitle(f"Model: {model_name}", fontsize=48, y=0.98)
+    plt_path = f"results/plots/{model_name}_vocab_level_combined.png"
+    plt.savefig(plt_path, dpi=300, bbox_inches="tight")
+    print(f"Saved plot to {plt_path}")
+    plt.savefig(plt_path.replace(".png", ".pdf"), bbox_inches="tight")
+    print(f"Saved plot to {plt_path.replace('.png', '.pdf')}")
+    plt.close()

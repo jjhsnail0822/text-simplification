@@ -6,14 +6,16 @@
 set -euo pipefail
 mkdir -p logs
 
-export MODEL_ID="Qwen/Qwen3-4B-Instruct-2507"
+export MODEL_ID="google/gemma-3-4b-it"
 export EVALUATOR_MODEL_ID="Qwen/Qwen3-14B"
 
-export OUTPUT_DIR="results/grpo/Qwen3-4B-Instruct-2507-GRPO-14B"
+export OUTPUT_DIR="results/grpo/gemma-3-4b-it-2.0-1.0-1.0-jaccard-beta"
 
 export WEIGHT_VOCAB=2.0
 export WEIGHT_ENTAILMENT=1.0
-export WEIGHT_COHERENCE=2.0
+export WEIGHT_COHERENCE=1.0
+
+export TRAINING_FLAG=1
 
 export USE_EVAL_VLLM=1
 export VLLM_BATCH_INVARIANT=1
@@ -39,4 +41,5 @@ export CUDA_VISIBLE_DEVICES=1,2,3
 echo "Starting training..."
 accelerate launch --num_processes 3 src/experiments/train_grpo.py
 
+kill $VLLM_PID
 wait $VLLM_PID

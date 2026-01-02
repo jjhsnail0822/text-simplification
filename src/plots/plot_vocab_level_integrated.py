@@ -80,6 +80,9 @@ MODEL_ORDER = [
     "gemma-3-4b-it",
     "gemma-3-12b-it",
     "gemma-3-27b-it",
+    "gpt-5.2",
+    "gemini-2.5-flash",
+    "claude-sonnet-4-5-20250929",
 ]
 
 

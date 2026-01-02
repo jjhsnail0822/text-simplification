@@ -60,8 +60,8 @@ def load_data(mode, input_file):
                     normalized_data.append({
                         "language": lang,
                         "level": level,
-                        "original": item['original_text'],
-                        "simplified": item['simplified_text']
+                        "original": item['original_text'] or "",
+                        "simplified": item['simplified_text'] or ""
                     })
 
     elif mode in ["zero_shot", "trained"]:
@@ -77,7 +77,7 @@ def load_data(mode, input_file):
                 "language": item['language'],
                 "level": item['level'],
                 "original": original_text,
-                "simplified": simplified_text
+                "simplified": simplified_text or ""
             })
 
     return normalized_data
