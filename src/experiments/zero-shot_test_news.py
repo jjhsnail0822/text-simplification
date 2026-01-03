@@ -35,7 +35,7 @@ def main():
     #     }
 
     results = []
-    output_path = f"results/llm_test_pgv/{model_id_name}.json" if 'checkpoint' not in model_id_name else f"results/trained_llm_test_pgv/{model_id_name}.json"
+    output_path = f"results/llm_test_pgv/{model_id_name}.json"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     sampling_params = SamplingParams(max_tokens=2048, temperature=0.0)

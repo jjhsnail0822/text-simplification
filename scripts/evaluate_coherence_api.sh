@@ -35,16 +35,16 @@ else
     echo "Skipping GPT-5.2 (file not found)"
 fi
 
-# GEMINI_FILE="results/llm_test/gemini-2.5-flash.json"
-# if [ -f "$GEMINI_FILE" ]; then
-#     echo "Evaluating GEMINI 2.5 Coherence..."
-#     python src/experiments/evaluate_coherence_api.py \
-#         --mode zero_shot \
-#         --input_file $GEMINI_FILE \
-#         --output_file $OUT_DIR/eval_gemini25_coherence.json
-# else
-#     echo "Skipping GEMINI 2.5 (file not found)"
-# fi
+GEMINI_FILE="results/llm_test/gemini-2.5-flash.json"
+if [ -f "$GEMINI_FILE" ]; then
+    echo "Evaluating GEMINI 2.5 Coherence..."
+    python src/experiments/evaluate_coherence_api.py \
+        --mode zero_shot \
+        --input_file $GEMINI_FILE \
+        --output_file $OUT_DIR/eval_gemini25_coherence.json
+else
+    echo "Skipping GEMINI 2.5 (file not found)"
+fi
 
 # CLAUDE_FILE="results/llm_test/claude-sonnet-4-5-20250929.json"
 # if [ -f "$CLAUDE_FILE" ]; then
@@ -67,15 +67,15 @@ else
     echo "Skipping FUDGE (file not found)"
 fi
 
-TRAINED_FILE="results/trained_llm_test/checkpoint-2596-merged.json"
-if [ -f "$TRAINED_FILE" ]; then
-    echo "Evaluating Trained Model Coherence..."
-    python src/experiments/evaluate_coherence_api.py \
-        --mode trained \
-        --input_file $TRAINED_FILE \
-        --output_file $OUT_DIR/eval_trained_coherence.json
-else
-    echo "Skipping Trained Model (file not found)"
-fi
+# TRAINED_FILE="results/trained_llm_test/checkpoint-2596-merged.json"
+# if [ -f "$TRAINED_FILE" ]; then
+#     echo "Evaluating Trained Model Coherence..."
+#     python src/experiments/evaluate_coherence_api.py \
+#         --mode trained \
+#         --input_file $TRAINED_FILE \
+#         --output_file $OUT_DIR/eval_trained_coherence.json
+# else
+#     echo "Skipping Trained Model (file not found)"
+# fi
 
 echo "Coherence evaluation completed."

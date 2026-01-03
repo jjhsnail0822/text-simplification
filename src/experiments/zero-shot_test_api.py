@@ -30,7 +30,7 @@ def main():
     dataset = dataset['test']
 
     results = []
-    output_path = f"results/llm_test/{model_id_name}.json" if 'checkpoint' not in model_id_name else f"results/trained_llm_test/{model_id_name}.json"
+    output_path = f"results/llm_test/{model_id_name}.json"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     for sample in tqdm(dataset, desc="Testing LLM"):

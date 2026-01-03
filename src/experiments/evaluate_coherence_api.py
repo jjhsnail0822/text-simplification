@@ -1,17 +1,14 @@
 import argparse
 import json
 import os
-import asyncio
 import re
+import time
 import numpy as np
-from tqdm.asyncio import tqdm_asyncio
+from tqdm import tqdm
 from dotenv import load_dotenv
 from pathlib import Path
 from datasets import load_from_disk
-from openai import AsyncOpenAI
-from anthropic import AsyncAnthropic
-import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
+import openai
 
 # Load environment variables
 env_path = Path('.env.local')
@@ -117,60 +114,48 @@ def load_data(mode, input_file):
 
 class APIEvaluator:
     def __init__(self):
-        self.openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.anthropic_client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        self.gemini_model = genai.GenerativeModel('gemini-1.5-pro')
+        self.client = openai.OpenAI(
+            base_url=os.getenv("API_BASE_URL"),
+            api_key=os.getenv("API_KEY")
+        )
 
-    async def get_gpt_score(self, prompt_text):
-        try:
-            response = await self.openai_client.chat.completions.create(
-                model="gpt-4o",
-                messages=[{"role": "user", "content": prompt_text}],
-                temperature=0.0,
-                max_tokens=10
-            )
-            content = response.choices[0].message.content
-            return self._extract_score(content)
-        except Exception as e:
-            print(f"GPT Error: {e}")
-            return None
+    def _get_score_from_model(self, prompt_text, model_id):
+        if 'gpt' in model_id.lower():
+            reasoning_effort = "none"
+        elif 'gemini' in model_id.lower():
+            reasoning_effort = "disable"
+        else:
+            reasoning_effort = None
 
-    async def get_claude_score(self, prompt_text):
-        try:
-            response = await self.anthropic_client.messages.create(
-                model="claude-3-5-sonnet-20240620",
-                max_tokens=10,
-                temperature=0.0,
-                messages=[{"role": "user", "content": prompt_text}]
-            )
-            content = response.content[0].text
-            return self._extract_score(content)
-        except Exception as e:
-            print(f"Claude Error: {e}")
-            return None
+        for attempt in range(10):  # Retry up to 10 times
+            try:
+                response = self.client.chat.completions.create(
+                    model=model_id,
+                    messages=[{"role": "user", "content": prompt_text}],
+                    temperature=0.0,
+                    max_completion_tokens=10,
+                    reasoning_effort=reasoning_effort
+                )
+                content = response.choices[0].message.content
+                score = self._extract_score(content)
+                
+                if score is not None:
+                    return score
+                
+                print(f"[{model_id}] Failed to parse score from content: '{content}'. Retrying in 30 seconds...")
+            except Exception as e:
+                print(f"[{model_id}] API Error: {e}. Retrying in 30 seconds...")
+            
+            time.sleep(30)
 
-    async def get_gemini_score(self, prompt_text):
-        try:
-            response = await self.gemini_model.generate_content_async(
-                prompt_text,
-                generation_config=genai.types.GenerationConfig(
-                    candidate_count=1,
-                    max_output_tokens=10,
-                    temperature=0.0
-                ),
-                safety_settings={
-                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                }
-            )
-            content = response.text
-            return self._extract_score(content)
-        except Exception as e:
-            print(f"Gemini Error: {e}")
-            return None
+    def get_gpt_score(self, prompt_text):
+        return self._get_score_from_model(prompt_text, "gpt-5.2")
+
+    def get_claude_score(self, prompt_text):
+        return self._get_score_from_model(prompt_text, "claude-sonnet-4-5-20250929")
+
+    def get_gemini_score(self, prompt_text):
+        return self._get_score_from_model(prompt_text, "gemini-2.5-flash")
 
     def _extract_score(self, text):
         if not text: return None
@@ -179,7 +164,7 @@ class APIEvaluator:
             return int(match.group(1))
         return None
 
-async def evaluate_sample(evaluator, item):
+def evaluate_sample(evaluator, item):
     lang_code = item['language']
     language = LANG_TO_LANGUAGE.get(lang_code, lang_code)
     
@@ -189,44 +174,52 @@ async def evaluate_sample(evaluator, item):
         simplified_text=item['simplified']
     )
 
-    # Run all 3 evaluations concurrently
-    gpt_task = evaluator.get_gpt_score(prompt_text)
-    claude_task = evaluator.get_claude_score(prompt_text)
-    gemini_task = evaluator.get_gemini_score(prompt_text)
+    # Run evaluations sequentially
+    # gpt_score = evaluator.get_gpt_score(prompt_text)
+    # claude_score = evaluator.get_claude_score(prompt_text)
+    gemini_score = evaluator.get_gemini_score(prompt_text)
 
-    scores = await asyncio.gather(gpt_task, claude_task, gemini_task)
-    
-    gpt_score, claude_score, gemini_score = scores
-    
+    scores = [gemini_score]
     valid_scores = [s for s in scores if s is not None]
     avg_score = sum(valid_scores) / len(valid_scores) if valid_scores else 0.0
 
     return {
-        "gpt_score": gpt_score,
-        "claude_score": claude_score,
+        # "gpt_score": gpt_score,
+        # "claude_score": claude_score,
         "gemini_score": gemini_score,
         "average_score": avg_score
     }
 
-async def process_all(data, output_file):
+def process_all(data, output_file):
     evaluator = APIEvaluator()
     results = []
     
-    # Semaphore to limit concurrent requests (adjust based on rate limits)
-    sem = asyncio.Semaphore(10) 
+    # Load existing results if file exists to resume progress
+    existing_details = []
+    if os.path.exists(output_file):
+        print(f"Output file found at {output_file}. Resuming evaluation...")
+        try:
+            with open(output_file, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+                existing_details = existing_data.get("details", [])
+        except Exception as e:
+            print(f"Error loading existing file: {e}. Starting from scratch.")
 
-    async def sem_task(item):
-        async with sem:
-            metrics = await evaluate_sample(evaluator, item)
-            item_result = item.copy()
-            item_result['coherence_metrics'] = metrics
-            return item_result
+    for i, item in enumerate(tqdm(data, desc="Evaluating Coherence")):
+        # Check if this item has already been evaluated
+        if i < len(existing_details):
+            existing_item = existing_details[i]
+            metrics = existing_item.get('coherence_metrics', {})
+            # Check if the score is valid (not None). 
+            # Currently checking 'gemini_score' as it is the active model in evaluate_sample.
+            if metrics.get('gemini_score') is not None:
+                results.append(existing_item)
+                continue
 
-    tasks = [sem_task(item) for item in data]
-    
-    for completed_task in tqdm_asyncio.as_completed(tasks, desc="Evaluating Coherence"):
-        result = await completed_task
-        results.append(result)
+        metrics = evaluate_sample(evaluator, item)
+        item_result = item.copy()
+        item_result['coherence_metrics'] = metrics
+        results.append(item_result)
 
     # Aggregate results
     summary = aggregate_results(results)
@@ -294,7 +287,7 @@ def main():
         data = data[:args.limit]
         print(f"Limiting to {args.limit} samples.")
 
-    asyncio.run(process_all(data, args.output_file))
+    process_all(data, args.output_file)
 
 if __name__ == "__main__":
     main()

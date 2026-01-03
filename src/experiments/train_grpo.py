@@ -211,21 +211,15 @@ Output only a single integer from 0 to 100, and say nothing else.
             reward = int(re.findall(r'\d+', t)[0]) if re.findall(r'\d+', t) else 0
 
             reward = max(0, min(100, reward)) / 100.0  # normalize to [0, 1]
-
-            # # If TRAINING_FLAG is set and reward is less than tau, apply linear penalty:
-            # # y = tau - k * (tau - x)
-            # tau = 0.95
-            # k = float(19/7)
-            # if TRAINING_FLAG:
-            #     if reward < tau:
-            #         reward = tau - k * (tau - reward)
-            #         reward = max(0.0, reward)
-            #     else:
-            #         reward = tau
             rewards.append(reward)
 
         if TRAINING_FLAG:
-            alpha = 0.05
+            # first, calculate 1-((1-reward)/1-alpha)^2 for each reward
+            alpha = 0.6
+            rewards = [max(1 - ((1 - r) / (1 - alpha)) ** 2, 0) for r in rewards]
+
+            # then, apply jaccard similarity penalty based on hard tokens
+            beta = 0.05
             levels = kwargs['level']
 
             def get_hard_token_sets(texts, langs, levels):
@@ -267,7 +261,7 @@ Output only a single integer from 0 to 100, and say nothing else.
                     jaccard_sim = intersection / union
                 
                 # Apply penalty
-                rewards[i] = rewards[i] - (alpha * jaccard_sim)
+                rewards[i] = rewards[i] - (beta * jaccard_sim)
 
         return rewards
 
@@ -438,8 +432,8 @@ Output only a single integer from 0 to 100, and say nothing else.
 
                 remaining_refs_after = len(sentences_ref) - (ref_i + 1)
                 max_end = len(sentences_comp) - remaining_refs_after - 1  # inclusive
-                max_end = min(max_end, comp_idx + 4 - 1)  # cap span growth to 4 sentences
-                # max_end = min(max_end, comp_idx)  # cap span growth to 1 sentence
+                # max_end = min(max_end, comp_idx + 4 - 1)  # cap span growth to 4 sentences
+                max_end = min(max_end, comp_idx)  # cap span growth to 1 sentence
 
                 if comp_idx >= len(sentences_comp) or comp_idx > max_end:
                     # Not enough completion sentences left to form a valid alignment.

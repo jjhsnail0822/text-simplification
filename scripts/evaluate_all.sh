@@ -1,13 +1,16 @@
 #!/bin/bash
 #SBATCH -q base_qos
 #SBATCH -p gigabyte_A6000
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:3
 
 set -euo pipefail
 mkdir -p logs results/evaluation
 
 export MODEL_ID="Qwen/Qwen3-4B-Instruct-2507"
-export EVALUATOR_MODEL_ID="Qwen/Qwen3-14B"
+# Evaluator Models
+export EVALUATOR_MODEL_1="google/gemma-3-27b-it"
+export EVALUATOR_MODEL_2="Qwen/Qwen3-32B"
+
 export USE_EVAL_VLLM=1
 export EVAL_VLLM_ENDPOINT=http://localhost:8008/v1
 
@@ -15,102 +18,168 @@ export WEIGHT_VOCAB=2.0
 export WEIGHT_ENTAILMENT=1.0
 export WEIGHT_COHERENCE=2.0
 
-echo "Starting vLLM server for evaluator..."
-CUDA_VISIBLE_DEVICES=0 vllm serve $EVALUATOR_MODEL_ID \
-  --port 8008 --data-parallel-size 1 --gpu-memory-utilization 0.95 \
-  --served-model-name evaluator \
-  --max-model-len 4096 \
-  --uvicorn-log-level warning \
-  --disable-uvicorn-access-log \
-  --disable-log-requests \
-  > logs/vllm_eval-$SLURM_JOB_ID.log 2>&1 &
-VLLM_PID=$!
+# Function to manage vLLM and run evaluation in two phases
+run_evaluation() {
+    MODE=$1
+    INPUT_FILE=$2
+    OUTPUT_FILE=$3
+    TEMP_FILE="${OUTPUT_FILE}.temp"
 
-until curl -sSf http://localhost:8008/health >/dev/null; do
-  echo "Waiting for vLLM to be ready..."
-  sleep 10
-done
+    echo "========================================================"
+    echo "Starting Evaluation for Mode: $MODE"
+    echo "Output: $OUTPUT_FILE"
+    echo "========================================================"
 
-export CUDA_VISIBLE_DEVICES=1
+    # ---------------------------------------------------------
+    # Phase 1: Compute Vocab, Entailment, Coherence (Model 1)
+    # ---------------------------------------------------------
+    echo "[Phase 1] Starting vLLM with $EVALUATOR_MODEL_1 on GPUs 0,1..."
+    CUDA_VISIBLE_DEVICES=0,1 vllm serve $EVALUATOR_MODEL_1 \
+      --port 8008 --data-parallel-size 1 --tensor-parallel-size 2 --gpu-memory-utilization 0.95 \
+      --served-model-name evaluator \
+      --max-model-len 4096 \
+      --uvicorn-log-level warning \
+      --disable-uvicorn-access-log \
+      --disable-log-requests \
+      --default-chat-template-kwargs '{"enable_thinking": false}' \
+      > logs/vllm_eval_p1-$SLURM_JOB_ID.log 2>&1 &
+    VLLM_PID=$!
 
-echo "Evaluating Original Text..."
-python src/experiments/evaluate_all.py \
-    --mode original \
-    --output_file results/evaluation/eval_original.json \
-    --model_id $MODEL_ID
+    # Wait for vLLM
+    count=0
+    until curl -sSf http://localhost:8008/health >/dev/null; do
+      echo "Waiting for vLLM (Model 1) to be ready... ($count s)"
+      sleep 10
+      count=$((count+10))
+      if [ $count -ge 1200 ]; then echo "vLLM timeout"; kill $VLLM_PID; exit 1; fi
+    done
 
+    echo "[Phase 1] Running evaluation script..."
+    # Export the correct model ID for Phase 1 so python script knows what to use
+    export EVALUATOR_MODEL_ID=$EVALUATOR_MODEL_1
+    
+    # Use GPU 2 for the python script
+    CUDA_VISIBLE_DEVICES=2 python src/experiments/evaluate_all.py \
+        --mode "$MODE" \
+        --input_file "$INPUT_FILE" \
+        --output_file "$OUTPUT_FILE" \
+        --temp_file "$TEMP_FILE" \
+        --phase 1 \
+        --model_id "$MODEL_ID"
+
+    echo "[Phase 1] Stopping vLLM..."
+    kill $VLLM_PID
+    wait $VLLM_PID
+    sleep 10
+
+    # ---------------------------------------------------------
+    # Phase 2: Compute Coherence (Model 2) and Average
+    # ---------------------------------------------------------
+    echo "[Phase 2] Starting vLLM with $EVALUATOR_MODEL_2 on GPUs 0,1..."
+    CUDA_VISIBLE_DEVICES=0,1 vllm serve $EVALUATOR_MODEL_2 \
+      --port 8008 --data-parallel-size 1 --tensor-parallel-size 2 --gpu-memory-utilization 0.95 \
+      --served-model-name evaluator \
+      --max-model-len 4096 \
+      --uvicorn-log-level warning \
+      --disable-uvicorn-access-log \
+      --disable-log-requests \
+      --default-chat-template-kwargs '{"enable_thinking": false}' \
+      > logs/vllm_eval_p2-$SLURM_JOB_ID.log 2>&1 &
+    VLLM_PID=$!
+
+    # Wait for vLLM
+    count=0
+    until curl -sSf http://localhost:8008/health >/dev/null; do
+      echo "Waiting for vLLM (Model 2) to be ready... ($count s)"
+      sleep 10
+      count=$((count+10))
+      if [ $count -ge 1200 ]; then echo "vLLM timeout"; kill $VLLM_PID; exit 1; fi
+    done
+
+    echo "[Phase 2] Running evaluation script..."
+    # Export the correct model ID for Phase 2
+    export EVALUATOR_MODEL_ID=$EVALUATOR_MODEL_2
+
+    # Use GPU 2 for the python script
+    CUDA_VISIBLE_DEVICES=2 python src/experiments/evaluate_all.py \
+        --mode "$MODE" \
+        --input_file "$INPUT_FILE" \
+        --output_file "$OUTPUT_FILE" \
+        --temp_file "$TEMP_FILE" \
+        --phase 2 \
+        --model_id "$MODEL_ID"
+
+    echo "[Phase 2] Stopping vLLM..."
+    kill $VLLM_PID
+    wait $VLLM_PID
+    sleep 10
+    
+    # Cleanup temp file
+    if [ -f "$TEMP_FILE" ]; then
+        rm "$TEMP_FILE"
+    fi
+    
+    echo "Evaluation for $MODE completed."
+}
+
+# ---------------------------------------------------------
+# Run Evaluations
+# ---------------------------------------------------------
+
+# 1. Original Text
+run_evaluation "original" "none" "results/evaluation/eval_original.json"
+
+# 2. Zero-Shot
 ZERO_SHOT_FILE="results/llm_test/Qwen3-4B-Instruct-2507.json"
 if [ -f "$ZERO_SHOT_FILE" ]; then
-    echo "Evaluating Zero-Shot..."
-    python src/experiments/evaluate_all.py \
-        --mode zero_shot \
-        --input_file $ZERO_SHOT_FILE \
-        --output_file results/evaluation/eval_zeroshot.json \
-        --model_id $MODEL_ID
+    run_evaluation "zero_shot" "$ZERO_SHOT_FILE" "results/evaluation/eval_zeroshot.json"
 else
-    echo "Skipping Zero-Shot (file not found at $ZERO_SHOT_FILE)"
+    echo "Skipping Zero-Shot (file not found)"
 fi
 
+# 3. GPT-5.2
 GPT_FILE="results/llm_test/gpt-5.2.json"
 if [ -f "$GPT_FILE" ]; then
-    echo "Evaluating GPT-5.2..."
-    python src/experiments/evaluate_all.py \
-        --mode zero_shot \
-        --input_file $GPT_FILE \
-        --output_file results/evaluation/eval_gpt52.json \
-        --model_id $MODEL_ID
+    run_evaluation "zero_shot" "$GPT_FILE" "results/evaluation/eval_gpt52.json"
 else
-    echo "Skipping GPT-5.2 (file not found at $GPT_FILE)"
+    echo "Skipping GPT-5.2 (file not found)"
 fi
 
+# 4. Gemini 2.5
 GEMINI_FILE="results/llm_test/gemini-2.5-flash.json"
 if [ -f "$GEMINI_FILE" ]; then
-    echo "Evaluating GEMINI 2.5..."
-    python src/experiments/evaluate_all.py \
-        --mode zero_shot \
-        --input_file $GEMINI_FILE \
-        --output_file results/evaluation/eval_gemini25.json \
-        --model_id $MODEL_ID
+    run_evaluation "zero_shot" "$GEMINI_FILE" "results/evaluation/eval_gemini25.json"
 else
-    echo "Skipping GEMINI (file not found at $GEMINI_FILE)"
+    echo "Skipping GEMINI (file not found)"
 fi
 
+# 5. Claude 4.5
 CLAUDE_FILE="results/llm_test/claude-sonnet-4-5-20250929.json"
 if [ -f "$CLAUDE_FILE" ]; then
-    echo "Evaluating Claude 4.5..."
-    python src/experiments/evaluate_all.py \
-        --mode zero_shot \
-        --input_file $CLAUDE_FILE \
-        --output_file results/evaluation/eval_claude45.json \
-        --model_id $MODEL_ID
+    run_evaluation "zero_shot" "$CLAUDE_FILE" "results/evaluation/eval_claude45.json"
 else
-    echo "Skipping Claude 4.5 (file not found at $CLAUDE_FILE)"
+    echo "Skipping Claude 4.5 (file not found)"
 fi
 
+# 6. FUDGE
 if [ -f "data/fudge_results.json" ]; then
-    echo "Evaluating FUDGE..."
-    python src/experiments/evaluate_all.py \
-        --mode fudge \
-        --input_file data/fudge_results.json \
-        --output_file results/evaluation/eval_fudge.json \
-        --model_id $MODEL_ID
+    run_evaluation "fudge" "data/fudge_results.json" "results/evaluation/eval_fudge.json"
 else
     echo "Skipping FUDGE (file not found)"
 fi
 
-TRAINED_FILE="results/trained_llm_test/checkpoint-2596-merged.json"
+TRAINED_FILE="results/trained_llm_test/Qwen3-4B-Instruct-2507-trained.json"
 if [ -f "$TRAINED_FILE" ]; then
-    echo "Evaluating Trained Model..."
-    python src/experiments/evaluate_all.py \
-        --mode trained \
-        --input_file $TRAINED_FILE \
-        --output_file results/evaluation/eval_trained.json \
-        --model_id $MODEL_ID
+    run_evaluation "trained" "$TRAINED_FILE" "results/evaluation/eval_Qwen3-4B-Instruct-2507-trained.json"
 else
-    echo "Skipping Trained Model (file not found at $TRAINED_FILE)"
+    echo "Skipping Trained Model (file not found)"
 fi
 
-echo "Stopping vLLM..."
-kill $VLLM_PID
-wait $VLLM_PID
-echo "Evaluation completed."
+TRAINED_FILE="results/trained_llm_test/gemma-3-4b-it-trained.json"
+if [ -f "$TRAINED_FILE" ]; then
+    run_evaluation "trained" "$TRAINED_FILE" "results/evaluation/eval_gemma-3-4b-it-trained.json"
+else
+    echo "Skipping Trained Model (file not found)"
+fi
+
+echo "All evaluations completed."
