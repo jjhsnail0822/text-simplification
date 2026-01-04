@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Generate a LaTeX table (written to a .txt file) from a JSON file.
 
@@ -147,14 +146,15 @@ def latex_table_grouped_by_language(
     label: str = "",
 ) -> str:
     lines: List[str] = []
-    lines.append(r"\begin{table}[t]")
+    lines.append(r"\begin{table}[htb]")
     lines.append(r"\centering")
+    lines.append(r"\small")
     lines.append(r"\begin{tabular}{llccc}")
     lines.append(r"\toprule")
     lines.append(
-        r"\textbf{Lang.} & \textbf{Level} & \textbf{Vocab.\ Coverage} & \textbf{Semantic\ Pres.} & \textbf{Coherence} \\"
+        r"\textbf{Lang.} & \textbf{Level} & \textbf{Voc.} & \textbf{Sem.} & \textbf{Coh.} \\"
     )
-    lines.append(r"\cmidrule(lr){2-5}")
+    lines.append(r"\midrule")
 
 
     # Keep only languages that actually have rows
@@ -188,7 +188,7 @@ def latex_table_grouped_by_language(
 
         # After each language block: midrule, except last: bottomrule
         if idx != len(nonempty) - 1:
-            lines.append(r"\cmidrule(lr){2-5}")
+            lines.append(r"\midrule")
         else:
             lines.append(r"\bottomrule")
 
@@ -209,8 +209,6 @@ def main() -> None:
         help="Output .txt path (default: same name as input with .tex_table.txt suffix).",
         default=None,
     )
-    ap.add_argument("--caption", default="", help="Optional LaTeX caption.")
-    ap.add_argument("--label", default="", help="Optional LaTeX label, e.g. tab:metrics")
     args = ap.parse_args()
 
     in_path = Path(args.input_json)
@@ -237,7 +235,11 @@ def main() -> None:
 
     groups.sort(key=lambda t: t[0])
 
-    tex = latex_table_grouped_by_language(groups, caption=args.caption, label=args.label)
+    # Automatic caption and label
+    auto_caption = "Evaluation results by language and level."
+    auto_label = f"tab:{in_path.stem}"
+
+    tex = latex_table_grouped_by_language(groups, caption=auto_caption, label=auto_label)
     out_path.write_text(tex, encoding="utf-8")
     print(f"Wrote LaTeX table to: {out_path}")
 

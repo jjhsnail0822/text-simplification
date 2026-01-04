@@ -127,37 +127,7 @@ class RewardFunctionContainer:
             sentences.append(s)
         return sentences
 
-    def _disallowed_chars_ratio(self, text, lang, parenthesis=True):
-        # Calculate the ratio of disallowed characters in the text for the given language
-        # if parenthesis is True, ignore characters inside parentheses
-        # for en, disallow ja, ko, zh characters
-        # for ja, disallow en, ko characters
-        # for ko, disallow en, ja, zh characters
-        # for zh, disallow en, ja, ko characters
-        if lang == 'en':
-            disallowed_chars = LANGUAGE_CHARSETS['ja'].pattern + '|' + LANGUAGE_CHARSETS['ko'].pattern + '|' + LANGUAGE_CHARSETS['zh'].pattern
-        elif lang == 'ja':
-            disallowed_chars = LANGUAGE_CHARSETS['en'].pattern + '|' + LANGUAGE_CHARSETS['ko'].pattern
-        elif lang == 'ko':
-            disallowed_chars = LANGUAGE_CHARSETS['en'].pattern + '|' + LANGUAGE_CHARSETS['ja'].pattern + '|' + LANGUAGE_CHARSETS['zh'].pattern
-        elif lang == 'zh':
-            disallowed_chars = LANGUAGE_CHARSETS['en'].pattern + '|' + LANGUAGE_CHARSETS['ja'].pattern + '|' + LANGUAGE_CHARSETS['ko'].pattern
-        if parenthesis:
-            text = re.sub(r'\(.*?\)', '', text)  # remove text inside parentheses
-        total_chars = len(text)
-        if total_chars == 0:
-            return 0.0
-        disallowed_chars = len(re.findall(disallowed_chars, text))
-        return disallowed_chars / total_chars
-    
     def reward_text_coherence(self, completions, **kwargs):
-        # prompt = (
-        #     "Rate the naturalness and fluency of the given {language} text on a scale from 0 to 10. "
-        #     "The text should flow naturally like it was written by a native speaker. "
-        #     "Penalize awkward or repetitive phrasing, or unnatural word choices. "
-        #     "Answer with a single number (0-10) only, and say nothing else.\n\n"
-        #     "[TEXT]\n{text}"
-        # )
         prompt = (
             """You are evaluating {language} text quality for a text simplification system.
 
@@ -265,61 +235,6 @@ Output only a single integer from 0 to 100, and say nothing else.
 
         return rewards
 
-    def reward_language_purity(self, completions, **kwargs):
-        texts = [c[0]["content"] for c in completions]
-        langs = kwargs["language"]
-        rewards = []
-        for text, lang in zip(texts, langs):
-            ratio = self._disallowed_chars_ratio(text, lang, parenthesis=True)
-            reward = max(0.0, 1.0 - ratio) # higher ratio -> lower reward
-            rewards.append(reward)
-        return rewards
-
-    def _tokenize_for_distinct_batch(self, texts, langs):
-        out = [None] * len(texts)
-        by_lang = {}
-        for i, lang in enumerate(langs):
-            by_lang.setdefault(lang, []).append(i)
-        for lang, idxs in by_lang.items():
-            nlp = spacy_nlp[lang]
-            for i_doc, doc in zip(idxs, nlp.pipe([texts[i] for i in idxs], batch_size=16, n_process=1)):
-                out[i_doc] = []
-                for t in doc:
-                    if lang == 'zh':
-                        out[i_doc].append(t.text)
-                    elif lang == 'ko':
-                        # spacy does not split compound words in Korean, so replace + with space
-                        toks = t.lemma_.replace("+", " ").split()
-                        out[i_doc].extend(toks)
-                    else:
-                        out[i_doc].append(t.lemma_.lower())
-        # out = []
-        # for text, lang in zip(texts, langs):
-        #     out.append(tokenizer.tokenize(text))
-        return out
-
-    def _distinct_n(self, tokens, n):
-        if len(tokens) < n:
-            return 0.0
-        total = max(1, len(tokens) - n + 1)
-        uniq = len({tuple(tokens[i:i+n]) for i in range(total)})
-        return uniq / total
-
-    def reward_distinct_n(self, completions, **kwargs):
-        texts = [c[0]["content"] for c in completions]
-        langs = kwargs["language"]
-        token_lists = self._tokenize_for_distinct_batch(texts, langs)
-        rewards = []
-        for toks in token_lists:
-            d1 = self._distinct_n(toks, 1)
-            d2 = self._distinct_n(toks, 2)
-            # d3 = _distinct_n(toks, 3)
-            # Weighted sum; emphasize bigram/trigram to discourage phrase looping
-            # r = 0.4 * d1 + 0.35 * d2 + 0.25 * d3
-            r = 0.5 * d1 + 0.5 * d2
-            rewards.append(max(0.0, min(1.0, r)))
-        return rewards
-
     def reward_entailment(self, completions, **kwargs):
         def _nli_entails_batch(premises, hypotheses, batch_size=32):
             # Predict entailment for each (premise, hypothesis) pair.
@@ -334,16 +249,6 @@ Output only a single integer from 0 to 100, and say nothing else.
             todo_indices = []
             todo_premises = []
             todo_hypotheses = []
-
-            # for i, (p, h) in enumerate(zip(premises, hypotheses)):
-            #     # Optimization: If premise and hypothesis are identical, it is entailment.
-            #     # This fixes the issue where NLI models predict "Neutral" for identical sentences.
-            #     if p.strip() == h.strip():
-            #         out_bools[i] = True
-            #     else:
-            #         todo_indices.append(i)
-            #         todo_premises.append(p)
-            #         todo_hypotheses.append(h)
 
             for i, (p, h) in enumerate(zip(premises, hypotheses)):
                 todo_indices.append(i)
@@ -432,8 +337,8 @@ Output only a single integer from 0 to 100, and say nothing else.
 
                 remaining_refs_after = len(sentences_ref) - (ref_i + 1)
                 max_end = len(sentences_comp) - remaining_refs_after - 1  # inclusive
-                # max_end = min(max_end, comp_idx + 4 - 1)  # cap span growth to 4 sentences
-                max_end = min(max_end, comp_idx)  # cap span growth to 1 sentence
+                max_end = min(max_end, comp_idx + 4 - 1)  # cap span growth to 4 sentences
+                # max_end = min(max_end, comp_idx)  # cap span growth to 1 sentence
 
                 if comp_idx >= len(sentences_comp) or comp_idx > max_end:
                     # Not enough completion sentences left to form a valid alignment.
@@ -527,94 +432,6 @@ Output only a single integer from 0 to 100, and say nothing else.
             references.append(reference)
         return references
 
-    # def reward_punctuation_penalty(self, completions, **kwargs):
-    #     completion_contents = [completion[0]["content"] for completion in completions]
-    #     penalties = [0.0] * len(completion_contents)
-    #     bad_chars = set('，．。！？；：（）—、')
-    #     langs = kwargs['language']
-    #     for i, content in enumerate(completion_contents):
-    #         if langs[i] == 'en' or langs[i] == 'ko':
-    #             if any(char in bad_chars for char in content):
-    #                 penalties[i] = 1.0
-    #     return penalties
-
-    # def reward_bleu_penalty(self, completions, **kwargs):
-    #     completion_contents = [completion[0]["content"] for completion in completions]
-    #     references = self.prompts_to_references(kwargs['prompts'])
-    #     bleu_scores = []
-    #     for i, (comp, ref) in enumerate(zip(completion_contents, references)):
-    #         lang = kwargs['language'][i]
-    #         comp_sentences = self.split_sentence(comp, lang)
-    #         ref_sentences = self.split_sentence(ref, lang)
-    #         res = bleu_assessor[lang].corpus_score(comp_sentences, [ref_sentences]).score
-    #         bleu_scores.append(res / 100.0)  # normalize to [0, 1]
-    #     return bleu_scores
-
-    def reward_length_ratio(self, completions, **kwargs):
-        texts = [c[0]["content"] for c in completions]
-        refs = self.prompts_to_references(kwargs['prompts'])
-        langs = kwargs["language"]
-        rewards = []
-        for comp, ref, lang in zip(texts, refs, langs):
-            splitted_comp = self.split_sentence(comp, lang)
-            splitted_ref = self.split_sentence(ref, lang)
-            # # Use the minimum number of sentence pairs
-            # n_pairs = min(len(splitted_comp), len(splitted_ref))
-            # if n_pairs == 0:
-            #     rewards.append(0.0)
-            #     continue
-            # splitted_comp = splitted_comp[:n_pairs]
-            # splitted_ref = splitted_ref[:n_pairs]
-
-            if len(splitted_comp) != len(splitted_ref):
-                # Skip length ratio reward if number of sentences do not match
-                rewards.append(0.0)
-                continue
-            
-            reward = []
-            for c_sent, r_sent in zip(splitted_comp, splitted_ref):
-                ref_len = len(tokenizer.tokenize(r_sent))
-                comp_len = len(tokenizer.tokenize(c_sent))
-                if ref_len == 0 or comp_len == 0:
-                    reward.append(0.0)
-                    continue
-                length_ratio = comp_len / ref_len
-                # Quadratic reward centered at 1.0
-                r = max(0.0, 1.0 - (length_ratio - 1.0) ** 2)
-                reward.append(r)
-            rewards.append(sum(reward) / len(reward))
-        return rewards
-
-    # def reward_lm_fluency(self, completions, **kwargs):
-    #     model, tok, device, dtype = self.get_evaluator_hf_gpu()
-    #     texts = [c[0]["content"] for c in completions]
-    #     scores = []
-    #     model.eval()
-    #     with torch.no_grad():
-    #         for txt in texts:
-    #             enc = tok(txt, return_tensors="pt", truncation=True, max_length=MAX_COMPLETION_LENGTH).to(device)
-    #             if enc["input_ids"].size(1) < 1:
-    #                 scores.append(0.0)
-    #                 continue
-    #             out = model(**enc, labels=enc["input_ids"])
-    #             loss = float(out.loss)
-    #             scores.append(1.0 / (1.0 + loss))
-    #     return scores
-
-    def reward_bertscore(self, completions, **kwargs):
-        # Compute BERTScore F1 between completions and reference text in prompt and return as rewards
-        completion_contents = [completion[0]["content"] for completion in completions]
-        references = self.prompts_to_references(kwargs['prompts'])
-        P, R, F1 = bertscorer.score(completion_contents, references, verbose=False)
-        # for ref, comp in zip(references, completions):
-        #     print("Reference:", ref)
-        #     print("Completion:", comp)
-        #     print("BERTScore:", F1)
-        bertscores = F1.tolist()
-        # # penalize too high scores by quadratic function
-        # bertscores = [penalize_score(score) for score in bertscores]
-        return bertscores
-
     def reward_vocab_level(self, completions, **kwargs):
         completion_contents = [completion[0]["content"] for completion in completions]
         levels = kwargs['level']
@@ -629,12 +446,6 @@ Output only a single integer from 0 to 100, and say nothing else.
 
         return rewards
 
-    def reward_unique_words(self, completions, **kwargs):
-        completion_contents = [completion[0]["content"] for completion in completions]
-        levels = kwargs['level']
-        langs = kwargs['language']
-        return level_assessor.reward_unique_words(completion_contents, levels, langs)
-
 def initialize_resources(model_id_arg=None):
     global tokenizer, bertscorer, level_assessor, spacy_nlp
     global nli_tokenizer, nli_model, nli_device, entail_id
@@ -645,10 +456,6 @@ def initialize_resources(model_id_arg=None):
     print(f"Initializing resources with Model ID: {mid}")
 
     # Init model/tokenizer
-    # Note: We don't load the full CausalLM here if we only need the tokenizer for rewards,
-    # but some rewards might rely on it. For evaluation, we mostly need the tokenizer.
-    # If the main script needs the model, it should load it. 
-    # Here we ensure tokenizer is available for RewardFunctionContainer.
     try:
         tokenizer = AutoTokenizer.from_pretrained(mid)
     except Exception as e:
@@ -701,7 +508,7 @@ def main():
     # Init resources using the new function
     initialize_resources(MODEL_ID)
     
-    # Load model for training (kept in main as it's specific to training)
+    # Load model for training
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
         dtype="auto",
@@ -727,14 +534,12 @@ def main():
         vllm_mode="colocate",
         max_prompt_length=MAX_PROMPT_LENGTH,
         max_completion_length=MAX_COMPLETION_LENGTH,
-        learning_rate=3e-5, # 5e-6
+        learning_rate=3e-5,
         optim="adamw_8bit",
         gradient_checkpointing_kwargs={"use_reentrant": False},
         num_generations=8,
         per_device_train_batch_size=4,
         gradient_accumulation_steps=4,
-        # vllm_gpu_memory_utilization=0.5,
-        # vllm_tensor_parallel_size=2,
         vllm_max_model_length=1024,
         dataloader_num_workers=4,
         dataloader_pin_memory=True,
@@ -744,12 +549,8 @@ def main():
         logging_strategy="steps",
         logging_steps=5,
         save_steps=200,
-        # weights for [vocab_level, unique_words, bertscore, entailment, length_ratio, distinct_n, text_coherence]
-        # reward_weights=[4.0, 1.0, 1.0, 2.0, 0.5, 1.0, 0.5],
-        # reward_weights=[4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         beta = 0.002,
         reward_weights=[WEIGHT_VOCAB, WEIGHT_ENTAILMENT, WEIGHT_COHERENCE],
-        # reward_weights=[3.0, 0.5, 0.5, 2.0, 0.5, 1.0],
         seed=42,
         num_train_epochs = 0.25,
     )
@@ -759,12 +560,7 @@ def main():
         model=model,
         reward_funcs=[
             r.reward_vocab_level,
-            # r.reward_unique_words,
-            # r.reward_bertscore,
             r.reward_entailment,
-            # r.reward_length_ratio,
-            # r.reward_distinct_n,
-            # r.reward_language_purity,
             r.reward_text_coherence,
         ],
         args=training_args,

@@ -9,9 +9,9 @@ mkdir -p logs
 export MODEL_ID="Qwen/Qwen3-4B-Instruct-2507"
 export EVALUATOR_MODEL_ID="Qwen/Qwen3-14B"
 
-export OUTPUT_DIR="results/grpo/Qwen3-4B-Instruct-2507-2.0-1.0-1.0-span-1"
+export OUTPUT_DIR="results/grpo/Qwen3-4B-Instruct-2507-1.0-1.0-1.0-ablation"
 
-export WEIGHT_VOCAB=2.0
+export WEIGHT_VOCAB=1.0
 export WEIGHT_ENTAILMENT=1.0
 export WEIGHT_COHERENCE=1.0
 

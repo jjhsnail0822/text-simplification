@@ -3,7 +3,8 @@ from vllm import LLM, SamplingParams
 from transformers import AutoTokenizer
 
 def main():
-    model_id = "results/grpo/Qwen3-4B-Instruct-2507-2.0-1.0-1.0-new/Qwen3-4B-Instruct-2507-trained"
+    # model_id = "results/grpo/Qwen3-4B-Instruct-2507-2.0-1.0-1.0-new/Qwen3-4B-Instruct-2507-trained"
+    model_id = "google/gemma-3-4b-it"
 
     sampling_params = SamplingParams(max_tokens=1024, temperature=0.0)
     llm = LLM(model_id, max_model_len=2048)
