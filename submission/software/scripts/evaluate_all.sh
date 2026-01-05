@@ -1,8 +1,3 @@
-#!/bin/bash
-#SBATCH -q base_qos
-#SBATCH -p gigabyte_A6000
-#SBATCH --gres=gpu:3
-
 set -euo pipefail
 mkdir -p logs results/evaluation
 
@@ -129,103 +124,95 @@ run_evaluation() {
 # Run Evaluations
 # ---------------------------------------------------------
 
-# # # Original Text
-# # run_evaluation "original" "none" "results/evaluation/eval_original.json"
+# # Original Text
+# run_evaluation "original" "none" "results/evaluation/eval_original.json"
 
-# # Zero-Shot
-# ZERO_SHOT_FILE="results/llm_test/Qwen3-4B-Instruct-2507.json"
-# if [ -f "$ZERO_SHOT_FILE" ]; then
-#     run_evaluation "zero_shot" "$ZERO_SHOT_FILE" "results/evaluation/eval_zeroshot_Qwen3-4B-Instruct-2507.json"
-# else
-#     echo "Skipping Zero-Shot (file not found)"
-# fi
+# Zero-Shot
+ZERO_SHOT_FILE="results/llm_test/Qwen3-4B-Instruct-2507.json"
+if [ -f "$ZERO_SHOT_FILE" ]; then
+    run_evaluation "zero_shot" "$ZERO_SHOT_FILE" "results/evaluation/eval_zeroshot_Qwen3-4B-Instruct-2507.json"
+else
+    echo "Skipping Zero-Shot (file not found)"
+fi
 
-# ZERO_SHOT_FILE="results/llm_test/gemma-3-4b-it.json"
-# if [ -f "$ZERO_SHOT_FILE" ]; then
-#     run_evaluation "zero_shot" "$ZERO_SHOT_FILE" "results/evaluation/eval_zeroshot_gemma-3-4b-it.json"
-# else
-#     echo "Skipping Zero-Shot (file not found)"
-# fi
+ZERO_SHOT_FILE="results/llm_test/gemma-3-4b-it.json"
+if [ -f "$ZERO_SHOT_FILE" ]; then
+    run_evaluation "zero_shot" "$ZERO_SHOT_FILE" "results/evaluation/eval_zeroshot_gemma-3-4b-it.json"
+else
+    echo "Skipping Zero-Shot (file not found)"
+fi
 
-# ZERO_SHOT_FILE="results/llm_test_pgv/Qwen3-4B-Instruct-2507.json"
-# if [ -f "$ZERO_SHOT_FILE" ]; then
-#     run_evaluation "zero_shot" "$ZERO_SHOT_FILE" "results/evaluation/eval_pgv_zeroshot_Qwen3-4B-Instruct-2507.json"
-# else
-#     echo "Skipping Zero-Shot (file not found)"
-# fi
+ZERO_SHOT_FILE="results/llm_test_pgv/Qwen3-4B-Instruct-2507.json"
+if [ -f "$ZERO_SHOT_FILE" ]; then
+    run_evaluation "zero_shot" "$ZERO_SHOT_FILE" "results/evaluation/eval_pgv_zeroshot_Qwen3-4B-Instruct-2507.json"
+else
+    echo "Skipping Zero-Shot (file not found)"
+fi
 
-# ZERO_SHOT_FILE="results/llm_test_pgv/gemma-3-4b-it.json"
-# if [ -f "$ZERO_SHOT_FILE" ]; then
-#     run_evaluation "zero_shot" "$ZERO_SHOT_FILE" "results/evaluation/eval_pgv_zeroshot_gemma-3-4b-it.json"
-# else
-#     echo "Skipping Zero-Shot (file not found)"
-# fi
+ZERO_SHOT_FILE="results/llm_test_pgv/gemma-3-4b-it.json"
+if [ -f "$ZERO_SHOT_FILE" ]; then
+    run_evaluation "zero_shot" "$ZERO_SHOT_FILE" "results/evaluation/eval_pgv_zeroshot_gemma-3-4b-it.json"
+else
+    echo "Skipping Zero-Shot (file not found)"
+fi
 
-# TRAINED_FILE="results/llm_test/Qwen3-4B-Instruct-2507-trained.json"
-# if [ -f "$TRAINED_FILE" ]; then
-#     run_evaluation "trained" "$TRAINED_FILE" "results/evaluation/eval_Qwen3-4B-Instruct-2507-trained.json"
-# else
-#     echo "Skipping Trained Model (file not found)"
-# fi
-
-# TRAINED_FILE="results/llm_test_pgv/Qwen3-4B-Instruct-2507-trained.json"
-# if [ -f "$TRAINED_FILE" ]; then
-#     run_evaluation "trained" "$TRAINED_FILE" "results/evaluation/eval_pgv_Qwen3-4B-Instruct-2507-trained.json"
-# else
-#     echo "Skipping Trained Model (file not found)"
-# fi
-
-# TRAINED_FILE="results/llm_test/gemma-3-4b-it-trained.json"
-# if [ -f "$TRAINED_FILE" ]; then
-#     run_evaluation "trained" "$TRAINED_FILE" "results/evaluation/eval_gemma-3-4b-it-trained.json"
-# else
-#     echo "Skipping Trained Model (file not found)"
-# fi
-
-# TRAINED_FILE="results/llm_test_pgv/gemma-3-4b-it-trained.json"
-# if [ -f "$TRAINED_FILE" ]; then
-#     run_evaluation "trained" "$TRAINED_FILE" "results/evaluation/eval_pgv_gemma-3-4b-it-trained.json"
-# else
-#     echo "Skipping Trained Model (file not found)"
-# fi
-
-# # GPT-5.2
-# GPT_FILE="results/llm_test/gpt-5.2.json"
-# if [ -f "$GPT_FILE" ]; then
-#     run_evaluation "zero_shot" "$GPT_FILE" "results/evaluation/eval_gpt52.json"
-# else
-#     echo "Skipping GPT-5.2 (file not found)"
-# fi
-
-# # Gemini 2.5
-# GEMINI_FILE="results/llm_test/gemini-2.5-flash.json"
-# if [ -f "$GEMINI_FILE" ]; then
-#     run_evaluation "zero_shot" "$GEMINI_FILE" "results/evaluation/eval_gemini25.json"
-# else
-#     echo "Skipping GEMINI (file not found)"
-# fi
-
-# # # Claude 4.5
-# # CLAUDE_FILE="results/llm_test/claude-sonnet-4-5-20250929.json"
-# # if [ -f "$CLAUDE_FILE" ]; then
-# #     run_evaluation "zero_shot" "$CLAUDE_FILE" "results/evaluation/eval_claude45.json"
-# # else
-# #     echo "Skipping Claude 4.5 (file not found)"
-# # fi
-
-# # FUDGE
-# if [ -f "data/fudge_results.json" ]; then
-#     run_evaluation "fudge" "data/fudge_results.json" "results/evaluation/eval_fudge.json"
-# else
-#     echo "Skipping FUDGE (file not found)"
-# fi
-
-TRAINED_FILE="results/llm_test/Qwen3-4B-Instruct-2507-2.0-0.0-1.0-ablation-trained.json"
+TRAINED_FILE="results/llm_test/Qwen3-4B-Instruct-2507-trained.json"
 if [ -f "$TRAINED_FILE" ]; then
-    run_evaluation "trained" "$TRAINED_FILE" "results/evaluation/eval_Qwen3-4B-Instruct-2507-2.0-0.0-1.0-ablation-trained.json"
+    run_evaluation "trained" "$TRAINED_FILE" "results/evaluation/eval_Qwen3-4B-Instruct-2507-trained.json"
 else
     echo "Skipping Trained Model (file not found)"
 fi
 
+TRAINED_FILE="results/llm_test_pgv/Qwen3-4B-Instruct-2507-trained.json"
+if [ -f "$TRAINED_FILE" ]; then
+    run_evaluation "trained" "$TRAINED_FILE" "results/evaluation/eval_pgv_Qwen3-4B-Instruct-2507-trained.json"
+else
+    echo "Skipping Trained Model (file not found)"
+fi
+
+TRAINED_FILE="results/llm_test/gemma-3-4b-it-trained.json"
+if [ -f "$TRAINED_FILE" ]; then
+    run_evaluation "trained" "$TRAINED_FILE" "results/evaluation/eval_gemma-3-4b-it-trained.json"
+else
+    echo "Skipping Trained Model (file not found)"
+fi
+
+TRAINED_FILE="results/llm_test_pgv/gemma-3-4b-it-trained.json"
+if [ -f "$TRAINED_FILE" ]; then
+    run_evaluation "trained" "$TRAINED_FILE" "results/evaluation/eval_pgv_gemma-3-4b-it-trained.json"
+else
+    echo "Skipping Trained Model (file not found)"
+fi
+
+# GPT-5.2
+GPT_FILE="results/llm_test/gpt-5.2.json"
+if [ -f "$GPT_FILE" ]; then
+    run_evaluation "zero_shot" "$GPT_FILE" "results/evaluation/eval_gpt52.json"
+else
+    echo "Skipping GPT-5.2 (file not found)"
+fi
+
+# Gemini 2.5
+GEMINI_FILE="results/llm_test/gemini-2.5-flash.json"
+if [ -f "$GEMINI_FILE" ]; then
+    run_evaluation "zero_shot" "$GEMINI_FILE" "results/evaluation/eval_gemini25.json"
+else
+    echo "Skipping GEMINI (file not found)"
+fi
+
+# # Claude 4.5
+# CLAUDE_FILE="results/llm_test/claude-sonnet-4-5-20250929.json"
+# if [ -f "$CLAUDE_FILE" ]; then
+#     run_evaluation "zero_shot" "$CLAUDE_FILE" "results/evaluation/eval_claude45.json"
+# else
+#     echo "Skipping Claude 4.5 (file not found)"
+# fi
+
+# FUDGE
+if [ -f "data/fudge_results.json" ]; then
+    run_evaluation "fudge" "data/fudge_results.json" "results/evaluation/eval_fudge.json"
+else
+    echo "Skipping FUDGE (file not found)"
+fi
 
 echo "All evaluations completed."
