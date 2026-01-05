@@ -8,9 +8,9 @@ from vllm.multimodal.registry import cached_tokenizer_from_config
 from level_assessment import LevelAssessor
 
 END_OF_TEXT_TOKEN_ID = 151643
-#https://docs.vllm.ai/en/v0.11.0/features/custom_logitsprocs.html?h=custom+logit#wrapping-an-existing-request-level-logits-processor
+#This is an implementation of FUDGE: Controlled Text Generation With Future Discriminators (Yang & Klein, NAACL 2021) as a baseline.
+#This code is adapted from FUDGE baseline implementation of Aligning Sentence Simplification with ESL Learner’s Proficiency for Language Acquisition (Li et al., NAACL 2025).
 class LevelWeighter:
-    # Adapted from https://github.com/JumpyPizza/align-sentence-simplification-with-ESL-learner/blob/main/baselines/conditional_beam_search.py
     def __init__(self,tokenizer):
         self.tokenizer = tokenizer
         self.assessor = LevelAssessor(batch_size=100)
