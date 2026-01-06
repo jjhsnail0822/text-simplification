@@ -34,8 +34,6 @@ for idx, row in tqdm(df.iterrows(), total=df.shape[0]):
                 new_data.append({
                     "Word": w,
                     "Level": level,
-                    # "Guideword": row["길잡이말"],
-                    # "Part of Speech": row["품사"],
                 })
 
 # only remain the lowest level for each word

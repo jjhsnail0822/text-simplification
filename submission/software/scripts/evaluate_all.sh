@@ -124,9 +124,6 @@ run_evaluation() {
 # Run Evaluations
 # ---------------------------------------------------------
 
-# # Original Text
-# run_evaluation "original" "none" "results/evaluation/eval_original.json"
-
 # Zero-Shot
 ZERO_SHOT_FILE="results/llm_test/Qwen3-4B-Instruct-2507.json"
 if [ -f "$ZERO_SHOT_FILE" ]; then
@@ -199,14 +196,6 @@ if [ -f "$GEMINI_FILE" ]; then
 else
     echo "Skipping GEMINI (file not found)"
 fi
-
-# # Claude 4.5
-# CLAUDE_FILE="results/llm_test/claude-sonnet-4-5-20250929.json"
-# if [ -f "$CLAUDE_FILE" ]; then
-#     run_evaluation "zero_shot" "$CLAUDE_FILE" "results/evaluation/eval_claude45.json"
-# else
-#     echo "Skipping Claude 4.5 (file not found)"
-# fi
 
 # FUDGE
 if [ -f "data/fudge_results.json" ]; then

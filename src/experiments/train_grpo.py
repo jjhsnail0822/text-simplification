@@ -566,7 +566,6 @@ def main():
         args=training_args,
         train_dataset=dataset,
         peft_config=lora_config,
-        resume_from_checkpoint=True,
     )
 
     # Train

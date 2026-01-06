@@ -129,8 +129,8 @@ run_evaluation() {
 # Run Evaluations
 # ---------------------------------------------------------
 
-# # # Original Text
-# # run_evaluation "original" "none" "results/evaluation/eval_original.json"
+# Original Text
+run_evaluation "original" "none" "results/evaluation/eval_original.json"
 
 # # Zero-Shot
 # ZERO_SHOT_FILE="results/llm_test/Qwen3-4B-Instruct-2507.json"
@@ -219,13 +219,5 @@ run_evaluation() {
 # else
 #     echo "Skipping FUDGE (file not found)"
 # fi
-
-TRAINED_FILE="results/llm_test/Qwen3-4B-Instruct-2507-2.0-0.0-1.0-ablation-trained.json"
-if [ -f "$TRAINED_FILE" ]; then
-    run_evaluation "trained" "$TRAINED_FILE" "results/evaluation/eval_Qwen3-4B-Instruct-2507-2.0-0.0-1.0-ablation-trained.json"
-else
-    echo "Skipping Trained Model (file not found)"
-fi
-
 
 echo "All evaluations completed."
