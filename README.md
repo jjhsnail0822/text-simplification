@@ -3,6 +3,8 @@ Code and data for _“Right at My Level: A Unified Multilingual Framework for Pr
 - Venue: ACL 2026 Main Conference
 - Authors: Jinhong Jeong, Junghun Park, Youngjae Yu
 
+![Image](https://github.com/user-attachments/assets/62aeb6ee-4ad0-4b6e-95ef-9f106e3d5ea6)
+
 ## About
 
 This repository provides the vocabulary data and the training code used in the paper _“Right at My Level: A Unified Multilingual Framework for Proficiency-Aware Text Simplification”_.
