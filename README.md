@@ -3,7 +3,7 @@ Code and data for _“Right at My Level: A Unified Multilingual Framework for Pr
 - Venue: ACL 2026 Main Conference
 - Authors: Jinhong Jeong, Junghun Park, Youngjae Yu
 
-![Image](https://github.com/user-attachments/assets/62aeb6ee-4ad0-4b6e-95ef-9f106e3d5ea6)
+![Image](https://github.com/user-attachments/assets/51df78ce-f03e-430d-8f64-ebd7672007b2)
 
 ## About
 
